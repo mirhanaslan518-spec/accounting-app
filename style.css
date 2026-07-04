@@ -21,12 +21,13 @@ body {
   font-family: 'IBM Plex Mono', monospace;
 }
 
-/* ---------- Sprint 0: login card (index.html) ---------- */
+/* ---------- Login screen (index.html) ---------- */
 
-body:has(.card) {
+#login-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 100vh;
   padding: 24px;
 }
 
@@ -100,21 +101,6 @@ button {
 
 button:hover { opacity: 0.9; }
 
-button.logout {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--muted);
-}
-
-.nav-link {
-  display: block;
-  margin: 4px 0 20px;
-  color: var(--accent);
-  text-decoration: none;
-  font-size: 13px;
-}
-.nav-link:hover { text-decoration: underline; }
-
 .error {
   color: var(--fail);
   font-size: 12px;
@@ -136,44 +122,26 @@ button.logout {
   font-size: 13px;
   margin: 0 0 20px;
 }
-
 .status-grid dt { color: var(--muted); }
 .status-grid dd { margin: 0; }
 
-.log {
-  margin-top: 16px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 12px;
-  min-height: 80px;
-  max-height: 220px;
-  overflow-y: auto;
-  font-size: 12px;
-  line-height: 1.7;
-  white-space: pre-wrap;
-}
-
-.log-line.log-pending { color: var(--muted); }
-.log-line.log-ok { color: var(--ok); }
-.log-line.log-fail { color: var(--fail); }
-
 .hidden { display: none; }
 
-/* ---------- Sprint 1: Customers page (customers.html) ---------- */
+/* ---------- Top navigation (customers.html, invoices.html, index.html app view) ---------- */
 
 .topnav {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
   padding: 16px 24px;
   border-bottom: 1px solid var(--border);
 }
-.topnav-brand {
-  color: var(--accent);
-  text-decoration: none;
-  font-size: 13px;
-}
+.topnav-brand { color: var(--accent); text-decoration: none; font-size: 13px; }
+.topnav-links { display: flex; gap: 16px; }
+.topnav-links a { color: var(--text); text-decoration: none; font-size: 13px; }
+.topnav-links a:hover { color: var(--accent); }
 .topnav-logout {
   width: auto;
   margin: 0;
@@ -210,11 +178,9 @@ button.logout {
   padding: 24px 0;
 }
 
-.customer-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+/* ---------- Shared list/card styles (customers + invoices) ---------- */
+
+.customer-list { display: flex; flex-direction: column; gap: 8px; }
 
 .customer-card {
   display: flex;
@@ -227,23 +193,28 @@ button.logout {
   padding: 14px 16px;
   flex-wrap: wrap;
 }
-.customer-card-main {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
+.customer-card-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .customer-card-main strong { font-size: 14px; }
 .customer-card-sub { font-size: 12px; color: var(--muted); }
-.customer-card-actions { display: flex; gap: 8px; flex-shrink: 0; }
-.customer-card-actions button {
-  width: auto;
-  margin: 0;
-  padding: 6px 12px;
-  font-size: 12px;
-}
+.customer-card-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.customer-card-actions button { width: auto; margin: 0; padding: 6px 12px; font-size: 12px; }
 .edit-btn { background: transparent; border: 1px solid var(--border); color: var(--text); }
 .delete-btn { background: transparent; border: 1px solid var(--fail); color: var(--fail); }
+.invoice-total { font-size: 13px; margin-right: 4px; }
+
+.status-badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-top: 4px;
+  width: fit-content;
+}
+.status-ok { background: rgba(63, 182, 139, 0.15); color: var(--ok); }
+.status-pending { background: rgba(232, 163, 61, 0.15); color: var(--accent); }
+.status-fail { background: rgba(217, 83, 79, 0.15); color: var(--fail); }
+
+/* ---------- Overlay + form (shared by Customers and Invoices) ---------- */
 
 .overlay {
   position: fixed;
@@ -256,6 +227,8 @@ button.logout {
   overflow-y: auto;
   z-index: 10;
 }
+/* This rule MUST come after .overlay so it wins the display tie-break. */
+.overlay.hidden { display: none; }
 
 .customer-form {
   background: var(--panel);
@@ -279,4 +252,65 @@ button.logout {
 .form-actions button { margin-top: 0; }
 button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
 
-.overlay.hidden { display: none; }
+/* ---------- Invoice-specific: due date presets ---------- */
+
+.due-date-presets { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 4px; }
+.preset-btn {
+  width: auto;
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 11px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+/* ---------- Invoice-specific: line items ---------- */
+
+#line-items { overflow-x: auto; padding-bottom: 4px; }
+
+.line-item-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr auto;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+  min-width: 640px;
+}
+.line-item-row input { margin: 0; }
+
+.li-total {
+  font-size: 12px;
+  text-align: right;
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.li-remove {
+  width: auto;
+  margin: 0;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid var(--fail);
+  color: var(--fail);
+}
+
+/* ---------- Invoice-specific: totals box ---------- */
+
+.totals-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 12px 0 16px;
+  font-size: 13px;
+}
+.totals-box > div { display: flex; justify-content: space-between; padding: 4px 0; }
+.totals-grand {
+  border-top: 1px solid var(--border);
+  margin-top: 6px !important;
+  padding-top: 8px !important;
+  font-size: 15px;
+}
+.totals-grand strong { color: var(--accent); }
