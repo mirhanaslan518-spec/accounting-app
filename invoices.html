@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Faturalar</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="topnav">
+    <a href="index.html" class="topnav-brand">← Ana Sayfa</a>
+    <div class="topnav-links">
+      <a href="customers.html">Müşteriler</a>
+      <a href="invoices.html">Faturalar</a>
+    </div>
+    <button id="logout-btn" class="topnav-logout">Çıkış Yap</button>
+  </nav>
+
+  <main class="container">
+    <div class="page-header">
+      <h1>Satış Faturaları</h1>
+      <button id="new-invoice-btn">+ Yeni Fatura</button>
+    </div>
+
+    <div id="invoice-list" class="customer-list">
+      <p class="empty-state">Yükleniyor...</p>
+    </div>
+
+    <div id="invoice-form-overlay" class="overlay hidden">
+      <form id="invoice-form" class="customer-form">
+        <h2 id="invoice-form-title">Yeni Fatura</h2>
+
+        <fieldset>
+          <legend>Fatura Bilgileri</legend>
+          <label>Fatura İsmi
+            <input type="text" id="invoice_name">
+          </label>
+          <label>Müşteri *
+            <select id="customer_id" required></select>
+          </label>
+          <label>Fatura No
+            <input type="text" id="invoice_number">
+          </label>
+          <label>Düzenleme Tarihi
+            <input type="date" id="issue_date" required>
+          </label>
+          <label>Vade Tarihi
+            <input type="date" id="due_date">
+          </label>
+          <div class="due-date-presets">
+            <button type="button" class="preset-btn" data-days="0">Aynı Gün</button>
+            <button type="button" class="preset-btn" data-days="7">7 Gün</button>
+            <button type="button" class="preset-btn" data-days="14">14 Gün</button>
+            <button type="button" class="preset-btn" data-days="30">30 Gün</button>
+            <button type="button" class="preset-btn" data-days="60">60 Gün</button>
+          </div>
+          <label>Tahsilat Durumu
+            <select id="collection_status">
+              <option value="tahsil_edilecek">Tahsil Edilecek</option>
+              <option value="tahsil_edildi">Tahsil Edildi</option>
+            </select>
+          </label>
+          <label>Döviz
+            <select id="currency">
+              <option value="TRY">TRY</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Kalemler</legend>
+          <div id="line-items"></div>
+          <button type="button" id="add-line-btn" class="secondary">+ Yeni Satır Ekle</button>
+        </fieldset>
+
+        <div class="totals-box">
+          <div><span>Ara Toplam</span><strong id="totals-subtotal">0.00</strong></div>
+          <div><span>Toplam KDV</span><strong id="totals-tax">0.00</strong></div>
+          <div class="totals-grand"><span>Genel Toplam</span><strong id="totals-grand">0.00</strong></div>
+        </div>
+
+        <label>Notlar
+          <textarea id="notes"></textarea>
+        </label>
+
+        <p id="invoice-form-error" class="error"></p>
+
+        <div class="form-actions">
+          <button type="button" id="invoice-cancel-btn" class="secondary">Vazgeç</button>
+          <button type="submit">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared.js"></script>
+  <script src="invoices.js"></script>
+</body>
+</html>
