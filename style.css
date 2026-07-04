@@ -1,0 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --border: #2a3138;
+  --text: #e6e6e6;
+  --muted: #8b949e;
+  --accent: #e8a33d;
+  --ok: #3fb68b;
+  --fail: #d9534f;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  padding: 24px;
+}
+
+.card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 32px;
+}
+
+.header { margin-bottom: 28px; }
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 16px 0 6px;
+}
+
+input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button {
+  width: 100%;
+  margin-top: 20px;
+  padding: 11px;
+  background: var(--accent);
+  border: none;
+  border-radius: 4px;
+  color: #14171a;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+button:hover { opacity: 0.9; }
+
+button.logout {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.error {
+  color: var(--fail);
+  font-size: 12px;
+  min-height: 16px;
+  margin: 10px 0 0;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 16px;
+  line-height: 1.5;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  font-size: 13px;
+  margin: 0 0 20px;
+}
+
+.status-grid dt { color: var(--muted); }
+.status-grid dd { margin: 0; }
+
+.log {
+  margin-top: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px;
+  min-height: 80px;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.log-line.log-pending { color: var(--muted); }
+.log-line.log-ok { color: var(--ok); }
+.log-line.log-fail { color: var(--fail); }
+
+.hidden { display: none; }

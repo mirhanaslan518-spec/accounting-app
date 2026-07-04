@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint 0 — System Check</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="card">
+    <header class="header">
+      <p class="eyebrow">SPRINT 0</p>
+      <h1>System Check</h1>
+      <p class="subtitle">Verifying Supabase connection, login, and company data isolation.</p>
+    </header>
+
+    <section id="login-section">
+      <form id="login-form">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="username">
+        <label for="password">Password</label>
+        <input type="password" id="password" required autocomplete="current-password">
+        <button type="submit">Log In</button>
+        <p id="login-error" class="error"></p>
+      </form>
+      <p class="hint">No account yet? Create one in the Supabase dashboard first — see Sprint 0 instructions, step 5.</p>
+    </section>
+
+    <section id="app-section" class="hidden">
+      <dl class="status-grid">
+        <dt>Signed in as</dt><dd id="user-email">—</dd>
+        <dt>Company</dt><dd id="company-name">—</dd>
+      </dl>
+
+      <button id="run-test-btn">Run Connection Test</button>
+      <div id="log" class="log"></div>
+
+      <button id="logout-btn" class="logout">Log Out</button>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>
