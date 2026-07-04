@@ -9,7 +9,7 @@
 // Row Level Security policies in schema.sql, not from hiding
 // this key.
 // =========================================================
-const SUPABASE_URL = "https://pwadtzdtdgfinbzigtis.supabase.co/rest/v1/";
+const SUPABASE_URL = "https://pwadtzdtdgfinbzigtis.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_JlunJBttQl8sdvcPyQM8vA_2EtDz5GS";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
