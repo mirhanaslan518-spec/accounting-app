@@ -16,12 +16,17 @@
 body {
   margin: 0;
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   background: var(--bg);
   color: var(--text);
   font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ---------- Sprint 0: login card (index.html) ---------- */
+
+body:has(.card) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 24px;
 }
 
@@ -63,7 +68,7 @@ label {
   margin: 16px 0 6px;
 }
 
-input {
+input, select, textarea {
   width: 100%;
   padding: 10px 12px;
   background: var(--bg);
@@ -74,7 +79,7 @@ input {
   font-size: 14px;
 }
 
-input:focus {
+input:focus, select:focus, textarea:focus {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
@@ -100,6 +105,15 @@ button.logout {
   border: 1px solid var(--border);
   color: var(--muted);
 }
+
+.nav-link {
+  display: block;
+  margin: 4px 0 20px;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 13px;
+}
+.nav-link:hover { text-decoration: underline; }
 
 .error {
   color: var(--fail);
@@ -145,3 +159,122 @@ button.logout {
 .log-line.log-fail { color: var(--fail); }
 
 .hidden { display: none; }
+
+/* ---------- Sprint 1: Customers page (customers.html) ---------- */
+
+.topnav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.topnav-brand {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 13px;
+}
+.topnav-logout {
+  width: auto;
+  margin: 0;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.page-header h1 { margin: 0; font-size: 20px; }
+.page-header button { width: auto; margin: 0; padding: 9px 16px; }
+
+.search-box { margin-bottom: 16px; font-size: 13px; }
+
+.empty-state {
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 24px 0;
+}
+
+.customer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.customer-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px 16px;
+  flex-wrap: wrap;
+}
+.customer-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.customer-card-main strong { font-size: 14px; }
+.customer-card-sub { font-size: 12px; color: var(--muted); }
+.customer-card-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.customer-card-actions button {
+  width: auto;
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.edit-btn { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.delete-btn { background: transparent; border: 1px solid var(--fail); color: var(--fail); }
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.customer-form {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  width: 100%;
+  max-width: 560px;
+}
+.customer-form h2 { margin: 0 0 16px; font-size: 18px; }
+.customer-form fieldset {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px 4px;
+  margin: 0 0 16px;
+}
+.customer-form legend { font-size: 12px; color: var(--accent); padding: 0 6px; }
+.customer-form textarea { min-height: 60px; resize: vertical; }
+
+.form-actions { display: flex; gap: 10px; margin-top: 20px; }
+.form-actions button { margin-top: 0; }
+button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
