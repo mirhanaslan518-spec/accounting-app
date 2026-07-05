@@ -1,7 +1,7 @@
 // =========================================================
 // invoices.js — logic for invoices.html
 // Relies on shared.js being loaded first (sb, requireSession,
-// getMyCompany).
+// getMyCompany, categorizeInvoice).
 // =========================================================
 
 let currentCompanyId = null;
@@ -21,7 +21,7 @@ const addLineBtn = document.getElementById("add-line-btn");
 
 // ---- STARTUP --------------------------------------------------------------
 async function init() {
-  const session = await requireSession(); // sends to index.html if not logged in
+  const session = await requireSession();
   if (!session) return;
 
   const company = await getMyCompany(session.user.id);
@@ -37,7 +37,7 @@ async function init() {
 
 // ---- CUSTOMER DROPDOWN ------------------------------------------------------
 async function loadCustomerOptions() {
-  const { data, error } = await sb
+  const { data } = await sb
     .from("customers")
     .select("id, company_title")
     .eq("company_id", currentCompanyId)
@@ -71,19 +71,6 @@ async function loadInvoices() {
   renderInvoiceList(allInvoices);
 }
 
-// Works out a human status label from the data we already have —
-// this is a small preview of the dashboard categories coming in a later sprint.
-function getStatusInfo(inv) {
-  const today = new Date().toISOString().slice(0, 10);
-  if (inv.collection_status === "tahsil_edildi") {
-    return { label: "Tahsil Edildi", cls: "status-ok" };
-  }
-  if (inv.due_date && inv.due_date < today) {
-    return { label: "Gecikmiş", cls: "status-fail" };
-  }
-  return { label: "Tahsil Edilecek", cls: "status-pending" };
-}
-
 function renderInvoiceList(invoices) {
   if (invoices.length === 0) {
     listEl.innerHTML = `<p class="empty-state">Henüz fatura oluşturulmadı.</p>`;
@@ -92,7 +79,11 @@ function renderInvoiceList(invoices) {
 
   listEl.innerHTML = "";
   invoices.forEach((inv) => {
-    const status = getStatusInfo(inv);
+    const status = categorizeInvoice(inv);
+    const toggleLabel = inv.collection_status === "tahsil_edildi"
+      ? "Tahsil Edilecek Yap"
+      : "Tahsil Edildi Yap";
+
     const card = document.createElement("div");
     card.className = "customer-card";
     card.innerHTML = `
@@ -103,6 +94,7 @@ function renderInvoiceList(invoices) {
       </div>
       <div class="customer-card-actions">
         <strong class="invoice-total">${Number(inv.grand_total).toFixed(2)} ${inv.currency}</strong>
+        <button class="toggle-btn" data-id="${inv.id}" data-status="${inv.collection_status}">${toggleLabel}</button>
         <button class="edit-btn" data-id="${inv.id}">Düzenle</button>
         <button class="delete-btn" data-id="${inv.id}">Sil</button>
       </div>
@@ -116,12 +108,26 @@ function renderInvoiceList(invoices) {
   document.querySelectorAll(".delete-btn").forEach((btn) => {
     btn.addEventListener("click", () => deleteInvoice(btn.dataset.id));
   });
+  document.querySelectorAll(".toggle-btn").forEach((btn) => {
+    btn.addEventListener("click", () => toggleCollectionStatus(btn.dataset.id, btn.dataset.status));
+  });
 }
 
 function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str || "";
   return div.innerHTML;
+}
+
+// ---- QUICK TOGGLE: mark paid / unpaid without opening the full form --------
+async function toggleCollectionStatus(id, currentStatus) {
+  const newStatus = currentStatus === "tahsil_edildi" ? "tahsil_edilecek" : "tahsil_edildi";
+  const { error } = await sb.from("invoices").update({ collection_status: newStatus }).eq("id", id);
+  if (error) {
+    alert(`Güncellenemedi: ${error.message}`);
+    return;
+  }
+  await loadInvoices();
 }
 
 // ---- LINE ITEM ROWS ----------------------------------------------------------
@@ -143,7 +149,7 @@ function createLineItemRow(line = {}) {
   row.appendChild(makeInput("li-quantity", "number", line.quantity ?? 1, "Miktar", "0.01"));
   row.appendChild(makeInput("li-unit", "text", line.unit ?? "adet", "Birim"));
   row.appendChild(makeInput("li-unit_price", "number", line.unit_price ?? 0, "Br. Fiyat", "0.01"));
-  row.appendChild(makeInput("li-tax_rate", "number", line.tax_rate ?? 20, "KDV %", "0.01"));
+  row.appendChild(makeInput("li-tax_rate", "number", line.tax_rate ?? 18, "KDV %", "0.01"));
 
   const totalSpan = document.createElement("span");
   totalSpan.className = "li-total";
