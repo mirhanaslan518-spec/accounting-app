@@ -30,7 +30,7 @@ body {
   min-height: 100vh;
   padding: 24px;
 }
-
+/* Must come after #login-wrapper so it wins over the ID's own display:flex. */
 #login-wrapper.hidden { display: none; }
 
 .card {
@@ -87,6 +87,17 @@ input:focus, select:focus, textarea:focus {
   outline-offset: 1px;
 }
 
+/* Remove the up/down spinner arrows on number inputs everywhere in the app. */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 button {
   width: 100%;
   margin-top: 20px;
@@ -129,7 +140,31 @@ button:hover { opacity: 0.9; }
 
 .hidden { display: none; }
 
-/* ---------- Top navigation (customers.html, invoices.html, index.html app view) ---------- */
+/* ---------- Dashboard stat cards (index.html) ---------- */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 4px 0 24px;
+}
+.stat-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.stat-label { font-size: 11px; color: var(--muted); }
+.stat-value { font-size: 20px; }
+.stat-card-primary { border-color: var(--accent); }
+.stat-card-primary .stat-value { color: var(--accent); }
+.stat-card-fail .stat-value { color: var(--fail); }
+.stat-card-neutral .stat-value { color: var(--muted); }
+
+/* ---------- Top navigation ---------- */
 
 .topnav {
   display: flex;
@@ -198,10 +233,11 @@ button:hover { opacity: 0.9; }
 .customer-card-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .customer-card-main strong { font-size: 14px; }
 .customer-card-sub { font-size: 12px; color: var(--muted); }
-.customer-card-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.customer-card-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
 .customer-card-actions button { width: auto; margin: 0; padding: 6px 12px; font-size: 12px; }
 .edit-btn { background: transparent; border: 1px solid var(--border); color: var(--text); }
 .delete-btn { background: transparent; border: 1px solid var(--fail); color: var(--fail); }
+.toggle-btn { background: transparent; border: 1px solid var(--ok); color: var(--ok); }
 .invoice-total { font-size: 13px; margin-right: 4px; }
 
 .status-badge {
@@ -215,6 +251,7 @@ button:hover { opacity: 0.9; }
 .status-ok { background: rgba(63, 182, 139, 0.15); color: var(--ok); }
 .status-pending { background: rgba(232, 163, 61, 0.15); color: var(--accent); }
 .status-fail { background: rgba(217, 83, 79, 0.15); color: var(--fail); }
+.status-neutral { background: rgba(139, 148, 158, 0.15); color: var(--muted); }
 
 /* ---------- Overlay + form (shared by Customers and Invoices) ---------- */
 
@@ -229,10 +266,13 @@ button:hover { opacity: 0.9; }
   overflow-y: auto;
   z-index: 10;
 }
-/* This rule MUST come after .overlay so it wins the display tie-break. */
+/* Must come after .overlay so it wins the display tie-break. */
 .overlay.hidden { display: none; }
 
 .customer-form {
+  /* min-width: 0 overrides the flex-item default that was forcing this
+     form wider than its own max-width because of the line items inside it. */
+  min-width: 0;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -242,6 +282,9 @@ button:hover { opacity: 0.9; }
 }
 .customer-form h2 { margin: 0 0 16px; font-size: 18px; }
 .customer-form fieldset {
+  /* fieldset elements have a long-standing browser quirk where they refuse
+     to shrink below their content's width unless min-width is set explicitly. */
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 12px 14px 4px;
@@ -269,7 +312,11 @@ button.secondary { background: transparent; border: 1px solid var(--border); col
 
 /* ---------- Invoice-specific: line items ---------- */
 
-#line-items { overflow-x: auto; padding-bottom: 4px; }
+#line-items {
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
 
 .line-item-row {
   display: grid;
