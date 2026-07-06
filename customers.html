@@ -3,76 +3,143 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ana Sayfa</title>
+<title>Müşteriler</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="login-wrapper">
-    <main class="card">
-      <header class="header">
-        <p class="eyebrow">GİRİŞ</p>
-        <h1>Hesabınıza Giriş Yapın</h1>
-        <p class="subtitle">Devam etmek için e-posta ve şifrenizi girin.</p>
-      </header>
+  <nav class="topnav">
+    <a href="index.html" class="topnav-brand">← Ana Sayfa</a>
+    <div class="topnav-links">
+      <a href="customers.html">Müşteriler</a>
+      <a href="invoices.html">Faturalar</a>
+      <a href="products.html">Ürünler</a>
+      <a href="accounts.html">Kasa/Banka</a>
+    </div>
+    <button id="logout-btn" class="topnav-logout">Çıkış Yap</button>
+  </nav>
 
-      <section id="login-section">
-        <form id="login-form">
-          <label for="email">E-posta</label>
-          <input type="email" id="email" required autocomplete="username">
-          <label for="password">Şifre</label>
-          <input type="password" id="password" required autocomplete="current-password">
-          <button type="submit">Giriş Yap</button>
-          <p id="login-error" class="error"></p>
-        </form>
-      </section>
-    </main>
-  </div>
+  <main class="container">
+    <div class="page-header">
+      <h1>Müşteriler</h1>
+      <button id="new-customer-btn">+ Yeni Müşteri</button>
+    </div>
 
-  <div id="app-section" class="hidden">
-    <nav class="topnav">
-      <span class="topnav-brand">Ana Sayfa</span>
-      <div class="topnav-links">
-        <a href="customers.html">Müşteriler</a>
-        <a href="invoices.html">Faturalar</a>
-        <a href="products.html">Ürünler</a>
-        <a href="accounts.html">Kasa/Banka</a>
-      </div>
-      <button id="logout-btn" class="topnav-logout">Çıkış Yap</button>
-    </nav>
-    <main class="container">
-      <dl class="status-grid">
-        <dt>Giriş yapan</dt><dd id="user-email">—</dd>
-        <dt>Şirket</dt><dd id="company-name">—</dd>
-      </dl>
+    <input type="text" id="search-input" class="search-box" placeholder="Müşteri ara...">
 
-      <div class="stats-grid">
-        <div class="stat-card stat-card-primary">
-          <span class="stat-label">Toplam Tahsil Edilecek</span>
-          <strong class="stat-value" id="stat-total">0.00</strong>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">Vadesi Gelecek</span>
-          <strong class="stat-value" id="stat-upcoming">0.00</strong>
-        </div>
-        <div class="stat-card stat-card-fail">
-          <span class="stat-label">Gecikmiş</span>
-          <strong class="stat-value" id="stat-overdue">0.00</strong>
-        </div>
-        <div class="stat-card stat-card-neutral">
-          <span class="stat-label">Planlanmamış</span>
-          <strong class="stat-value" id="stat-unplanned">0.00</strong>
-        </div>
-      </div>
+    <div id="customer-list" class="customer-list">
+      <p class="empty-state">Yükleniyor...</p>
+    </div>
 
-      <p class="hint">Soldaki menüden Müşteriler, Faturalar, Ürünler veya Kasa/Banka sayfasına gidebilirsiniz.</p>
-    </main>
-  </div>
+    <div id="customer-form-overlay" class="overlay hidden">
+      <form id="customer-form" class="customer-form">
+        <h2 id="form-title">Yeni Müşteri</h2>
+
+        <fieldset>
+          <legend>Temel Bilgiler</legend>
+          <label>Tür
+            <select id="customer_type">
+              <option value="tuzel">Tüzel Kişi</option>
+              <option value="gercek">Gerçek Kişi</option>
+            </select>
+          </label>
+          <label>Firma Unvanı *
+            <input type="text" id="company_title" required>
+          </label>
+          <label>Kısa İsim
+            <input type="text" id="short_name">
+          </label>
+          <label>VKN / TCKN
+            <input type="text" id="tax_id">
+          </label>
+          <label>Vergi Dairesi
+            <input type="text" id="tax_office">
+          </label>
+          <label>Kategori
+            <input type="text" id="category">
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>İletişim</legend>
+          <label>E-posta Adresi
+            <input type="email" id="email">
+          </label>
+          <label>Telefon Numarası
+            <input type="text" id="phone">
+          </label>
+          <label>Faks Numarası
+            <input type="text" id="fax">
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Adres</legend>
+          <label>Açık Adres
+            <textarea id="address"></textarea>
+          </label>
+          <label>Posta Kodu
+            <input type="text" id="postal_code">
+          </label>
+          <label>İlçe
+            <input type="text" id="district">
+          </label>
+          <label>İl
+            <input type="text" id="city">
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Finansal</legend>
+          <label>IBAN Numarası
+            <input type="text" id="iban">
+          </label>
+          <label>Fiyat Listesi
+            <input type="text" id="price_list">
+          </label>
+          <label>Döviz
+            <select id="currency">
+              <option value="TRY">TRY</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </label>
+          <label>Açılış Bakiyesi
+            <input type="number" step="0.01" id="opening_balance">
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Yetkili Kişi</legend>
+          <label>Adı
+            <input type="text" id="contact_name">
+          </label>
+          <label>E-posta
+            <input type="email" id="contact_email">
+          </label>
+          <label>Telefon
+            <input type="text" id="contact_phone">
+          </label>
+        </fieldset>
+
+        <label>Notlar
+          <textarea id="notes"></textarea>
+        </label>
+
+        <p id="form-error" class="error"></p>
+
+        <div class="form-actions">
+          <button type="button" id="cancel-btn" class="secondary">Vazgeç</button>
+          <button type="submit">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </main>
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
     window.supabase = { createClient };
   </script>
   <script src="shared.js" defer></script>
-  <script src="app.js" defer></script>
+  <script src="customers.js" defer></script>
 </body>
 </html>
