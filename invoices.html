@@ -12,6 +12,7 @@
     <div class="topnav-links">
       <a href="customers.html">Müşteriler</a>
       <a href="invoices.html">Faturalar</a>
+      <a href="products.html">Ürünler</a>
     </div>
     <button id="logout-btn" class="topnav-logout">Çıkış Yap</button>
   </nav>
@@ -25,6 +26,9 @@
     <div id="invoice-list" class="customer-list">
       <p class="empty-state">Yükleniyor...</p>
     </div>
+
+    <!-- Powers the autocomplete on each line item's description field. -->
+    <datalist id="product-options"></datalist>
 
     <div id="invoice-form-overlay" class="overlay hidden">
       <form id="invoice-form" class="customer-form">
