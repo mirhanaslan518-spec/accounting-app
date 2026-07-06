@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kasa ve Bankalar</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="topnav">
+    <a href="index.html" class="topnav-brand">← Ana Sayfa</a>
+    <div class="topnav-links">
+      <a href="customers.html">Müşteriler</a>
+      <a href="invoices.html">Faturalar</a>
+      <a href="products.html">Ürünler</a>
+      <a href="accounts.html">Kasa/Banka</a>
+    </div>
+    <button id="logout-btn" class="topnav-logout">Çıkış Yap</button>
+  </nav>
+
+  <main class="container">
+    <div class="page-header">
+      <h1>Kasa ve Bankalar</h1>
+      <button id="new-account-btn">+ Yeni Hesap</button>
+    </div>
+
+    <div id="account-list" class="customer-list">
+      <p class="empty-state">Yükleniyor...</p>
+    </div>
+
+    <div id="account-form-overlay" class="overlay hidden">
+      <form id="account-form" class="customer-form">
+        <h2 id="account-form-title">Yeni Hesap</h2>
+
+        <label>Hesap Adı *
+          <input type="text" id="name" required>
+        </label>
+        <label>Tür
+          <select id="account_type">
+            <option value="kasa">Kasa</option>
+            <option value="banka">Banka</option>
+          </select>
+        </label>
+        <label>Döviz
+          <select id="currency">
+            <option value="TRY">TRY</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </label>
+        <label>Açılış Bakiyesi
+          <input type="number" step="0.01" id="opening_balance" value="0">
+        </label>
+
+        <p id="account-form-error" class="error"></p>
+
+        <div class="form-actions">
+          <button type="button" id="account-cancel-btn" class="secondary">Vazgeç</button>
+          <button type="submit">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    window.supabase = { createClient };
+  </script>
+  <script src="shared.js" defer></script>
+  <script src="accounts.js" defer></script>
+</body>
+</html>
