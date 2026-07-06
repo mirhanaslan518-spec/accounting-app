@@ -7,7 +7,10 @@
 let currentCompanyId = null;
 let allInvoices = [];
 let allProducts = [];
+let allAccounts = [];
 let editingId = null; // null = new invoice, otherwise = id being edited
+let editingCollectionStatus = "tahsil_edilecek"; // preserved as-is when editing an invoice
+let pendingCollectId = null; // which invoice the collect-modal is currently acting on
 
 const listEl = document.getElementById("invoice-list");
 const newBtn = document.getElementById("new-invoice-btn");
@@ -19,6 +22,11 @@ const cancelBtn = document.getElementById("invoice-cancel-btn");
 const logoutBtn = document.getElementById("logout-btn");
 const lineItemsEl = document.getElementById("line-items");
 const addLineBtn = document.getElementById("add-line-btn");
+
+const collectOverlay = document.getElementById("collect-modal-overlay");
+const collectForm = document.getElementById("collect-form");
+const collectError = document.getElementById("collect-form-error");
+const collectCancelBtn = document.getElementById("collect-cancel-btn");
 
 // ---- STARTUP --------------------------------------------------------------
 async function init() {
@@ -34,6 +42,7 @@ async function init() {
 
   await loadCustomerOptions();
   await loadProductOptions();
+  await loadAccounts();
   await loadInvoices();
 }
 
@@ -74,13 +83,35 @@ async function loadProductOptions() {
   });
 }
 
+// ---- ACCOUNTS (for the collection modal) --------------------------------------
+async function loadAccounts() {
+  const { data } = await sb
+    .from("accounts")
+    .select("id, name, account_type")
+    .eq("company_id", currentCompanyId)
+    .order("name", { ascending: true });
+
+  allAccounts = data || [];
+}
+
+function populateAccountSelect() {
+  const select = document.getElementById("collect_account_id");
+  select.innerHTML = `<option value="">Seçiniz...</option>`;
+  allAccounts.forEach((a) => {
+    const opt = document.createElement("option");
+    opt.value = a.id;
+    opt.textContent = `${a.name} (${a.account_type === "banka" ? "Banka" : "Kasa"})`;
+    select.appendChild(opt);
+  });
+}
+
 // ---- LOAD + RENDER THE INVOICE LIST -----------------------------------------
 async function loadInvoices() {
   listEl.innerHTML = `<p class="empty-state">Yükleniyor...</p>`;
 
   const { data, error } = await sb
     .from("invoices")
-    .select("*, customers(company_title)")
+    .select("*, customers(company_title), accounts(name)")
     .eq("company_id", currentCompanyId)
     .order("issue_date", { ascending: false });
 
@@ -105,12 +136,16 @@ function renderInvoiceList(invoices) {
       ? "Tahsil Edilecek Yap"
       : "Tahsil Edildi Yap";
 
+    const collectedInfo = inv.collection_status === "tahsil_edildi" && inv.accounts
+      ? ` · ${escapeHtml(inv.accounts.name)}${inv.collected_date ? " (" + inv.collected_date + ")" : ""}`
+      : "";
+
     const card = document.createElement("div");
     card.className = "customer-card";
     card.innerHTML = `
       <div class="customer-card-main">
         <strong>${escapeHtml(inv.invoice_name || inv.invoice_number || "Fatura")}</strong>
-        <span class="customer-card-sub">${escapeHtml(inv.customers ? inv.customers.company_title : "")} · ${inv.issue_date || ""}</span>
+        <span class="customer-card-sub">${escapeHtml(inv.customers ? inv.customers.company_title : "")} · ${inv.issue_date || ""}${collectedInfo}</span>
         <span class="status-badge ${status.cls}">${status.label}</span>
       </div>
       <div class="customer-card-actions">
@@ -140,16 +175,69 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// ---- QUICK TOGGLE: mark paid / unpaid without opening the full form --------
+// ---- COLLECTION STATUS: the only place this ever changes ---------------------
 async function toggleCollectionStatus(id, currentStatus) {
-  const newStatus = currentStatus === "tahsil_edildi" ? "tahsil_edilecek" : "tahsil_edildi";
-  const { error } = await sb.from("invoices").update({ collection_status: newStatus }).eq("id", id);
-  if (error) {
-    alert(`Güncellenemedi: ${error.message}`);
+  if (currentStatus === "tahsil_edildi") {
+    // Undo is simple: flip back and clear the collection details.
+    const { error } = await sb.from("invoices").update({
+      collection_status: "tahsil_edilecek",
+      collected_date: null,
+      account_id: null,
+    }).eq("id", id);
+
+    if (error) {
+      alert(`Güncellenemedi: ${error.message}`);
+      return;
+    }
+    await loadInvoices();
     return;
   }
-  await loadInvoices();
+
+  // Marking as collected requires knowing which account received it.
+  if (allAccounts.length === 0) {
+    alert("Önce en az bir Kasa/Banka hesabı oluşturmalısınız (Kasa/Banka sayfası).");
+    return;
+  }
+
+  pendingCollectId = id;
+  collectError.textContent = "";
+  document.getElementById("collect_date").value = new Date().toISOString().slice(0, 10);
+  populateAccountSelect();
+  collectOverlay.classList.remove("hidden");
 }
+
+collectForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  collectError.textContent = "";
+
+  const date = document.getElementById("collect_date").value;
+  const accountId = document.getElementById("collect_account_id").value;
+
+  if (!accountId) {
+    collectError.textContent = "Hesap seçilmelidir.";
+    return;
+  }
+
+  const { error } = await sb.from("invoices").update({
+    collection_status: "tahsil_edildi",
+    collected_date: date,
+    account_id: accountId,
+  }).eq("id", pendingCollectId);
+
+  if (error) {
+    collectError.textContent = error.message;
+    return;
+  }
+
+  collectOverlay.classList.add("hidden");
+  pendingCollectId = null;
+  await loadInvoices();
+});
+
+collectCancelBtn.addEventListener("click", () => {
+  collectOverlay.classList.add("hidden");
+  pendingCollectId = null;
+});
 
 // ---- LINE ITEM ROWS ----------------------------------------------------------
 function makeInput(className, type, value, placeholder, step) {
@@ -166,8 +254,6 @@ function createLineItemRow(line = {}) {
   const row = document.createElement("div");
   row.className = "line-item-row";
 
-  // The description field is hooked up to the product datalist (built in
-  // loadProductOptions) so typed text can match a saved product name.
   const descInput = makeInput("li-description", "text", line.description ?? "", "Hizmet / Ürün açıklaması");
   descInput.setAttribute("list", "product-options");
   row.appendChild(descInput);
@@ -192,11 +278,6 @@ function createLineItemRow(line = {}) {
   });
   row.appendChild(removeBtn);
 
-  // When the typed description exactly matches a saved product, pull its
-  // unit / price / tax rate into this row automatically. Only fires when the
-  // person actively types or picks a value (the "change" event) — editing an
-  // old invoice never silently overwrites its original historical prices,
-  // even if the catalog price has since changed.
   descInput.addEventListener("change", () => {
     const typed = descInput.value.trim().toLowerCase();
     const match = allProducts.find((p) => p.name.toLowerCase() === typed);
@@ -258,6 +339,7 @@ addLineBtn.addEventListener("click", () => {
 // ---- FORM: OPEN / CLOSE -------------------------------------------------------
 function openForNew() {
   editingId = null;
+  editingCollectionStatus = "tahsil_edilecek"; // every new invoice starts uncollected
   formTitle.textContent = "Yeni Fatura";
   formError.textContent = "";
   form.reset();
@@ -275,6 +357,7 @@ async function openForEdit(id) {
   if (!inv) return;
 
   editingId = id;
+  editingCollectionStatus = inv.collection_status; // preserved untouched by this form
   formTitle.textContent = "Faturayı Düzenle";
   formError.textContent = "";
 
@@ -283,7 +366,6 @@ async function openForEdit(id) {
   document.getElementById("invoice_number").value = inv.invoice_number || "";
   document.getElementById("issue_date").value = inv.issue_date || "";
   document.getElementById("due_date").value = inv.due_date || "";
-  document.getElementById("collection_status").value = inv.collection_status || "tahsil_edilecek";
   document.getElementById("currency").value = inv.currency || "TRY";
   document.getElementById("notes").value = inv.notes || "";
 
@@ -352,7 +434,6 @@ form.addEventListener("submit", async (e) => {
   const invoiceNumber = document.getElementById("invoice_number").value || null;
   const issueDate = document.getElementById("issue_date").value;
   const dueDate = document.getElementById("due_date").value || null;
-  const collectionStatus = document.getElementById("collection_status").value;
   const currency = document.getElementById("currency").value;
   const notes = document.getElementById("notes").value || null;
 
@@ -365,7 +446,7 @@ form.addEventListener("submit", async (e) => {
       p_invoice_number: invoiceNumber,
       p_issue_date: issueDate,
       p_due_date: dueDate,
-      p_collection_status: collectionStatus,
+      p_collection_status: editingCollectionStatus, // untouched by this form
       p_currency: currency,
       p_notes: notes,
       p_lines: lines,
@@ -378,7 +459,7 @@ form.addEventListener("submit", async (e) => {
       p_invoice_number: invoiceNumber,
       p_issue_date: issueDate,
       p_due_date: dueDate,
-      p_collection_status: collectionStatus,
+      p_collection_status: "tahsil_edilecek", // new invoices always start uncollected
       p_currency: currency,
       p_notes: notes,
       p_lines: lines,
