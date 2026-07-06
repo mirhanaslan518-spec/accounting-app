@@ -6,6 +6,7 @@
 
 let currentCompanyId = null;
 let allInvoices = [];
+let allProducts = [];
 let editingId = null; // null = new invoice, otherwise = id being edited
 
 const listEl = document.getElementById("invoice-list");
@@ -32,6 +33,7 @@ async function init() {
   currentCompanyId = company.id;
 
   await loadCustomerOptions();
+  await loadProductOptions();
   await loadInvoices();
 }
 
@@ -50,6 +52,25 @@ async function loadCustomerOptions() {
     opt.value = c.id;
     opt.textContent = c.company_title;
     select.appendChild(opt);
+  });
+}
+
+// ---- PRODUCT CATALOG (for the line-item autocomplete) ------------------------
+async function loadProductOptions() {
+  const { data } = await sb
+    .from("products")
+    .select("id, name, unit, unit_price, tax_rate")
+    .eq("company_id", currentCompanyId)
+    .order("name", { ascending: true });
+
+  allProducts = data || [];
+
+  const datalist = document.getElementById("product-options");
+  datalist.innerHTML = "";
+  allProducts.forEach((p) => {
+    const opt = document.createElement("option");
+    opt.value = p.name;
+    datalist.appendChild(opt);
   });
 }
 
@@ -145,7 +166,12 @@ function createLineItemRow(line = {}) {
   const row = document.createElement("div");
   row.className = "line-item-row";
 
-  row.appendChild(makeInput("li-description", "text", line.description ?? "", "Hizmet / Ürün açıklaması"));
+  // The description field is hooked up to the product datalist (built in
+  // loadProductOptions) so typed text can match a saved product name.
+  const descInput = makeInput("li-description", "text", line.description ?? "", "Hizmet / Ürün açıklaması");
+  descInput.setAttribute("list", "product-options");
+  row.appendChild(descInput);
+
   row.appendChild(makeInput("li-quantity", "number", line.quantity ?? 1, "Miktar", "0.01"));
   row.appendChild(makeInput("li-unit", "text", line.unit ?? "adet", "Birim"));
   row.appendChild(makeInput("li-unit_price", "number", line.unit_price ?? 0, "Br. Fiyat", "0.01"));
@@ -165,6 +191,22 @@ function createLineItemRow(line = {}) {
     recalcTotals();
   });
   row.appendChild(removeBtn);
+
+  // When the typed description exactly matches a saved product, pull its
+  // unit / price / tax rate into this row automatically. Only fires when the
+  // person actively types or picks a value (the "change" event) — editing an
+  // old invoice never silently overwrites its original historical prices,
+  // even if the catalog price has since changed.
+  descInput.addEventListener("change", () => {
+    const typed = descInput.value.trim().toLowerCase();
+    const match = allProducts.find((p) => p.name.toLowerCase() === typed);
+    if (match) {
+      row.querySelector(".li-unit").value = match.unit || "adet";
+      row.querySelector(".li-unit_price").value = match.unit_price ?? 0;
+      row.querySelector(".li-tax_rate").value = match.tax_rate ?? 18;
+      recalcTotals();
+    }
+  });
 
   return row;
 }
