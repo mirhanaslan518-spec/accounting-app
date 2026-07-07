@@ -127,9 +127,15 @@ async function deleteAccount(id) {
 
   const { error } = await sb.from("accounts").delete().eq("id", id);
   if (error) {
-    // If any invoice has recorded a payment against this account, the
-    // database will refuse to delete it rather than orphan that record.
-    alert(`Silinemedi: ${error.message}`);
+    if (error.message.includes("foreign key constraint")) {
+      alert(
+        "Bu hesap silinemiyor çünkü en az bir faturada tahsilat kaydı için kullanılmış. " +
+        "Önce ilgili faturalarda \"Tahsil Edilecek Yap\" ile tahsilat kaydını kaldırmanız, " +
+        "sonra hesabı silmeniz gerekir."
+      );
+    } else {
+      alert(`Silinemedi: ${error.message}`);
+    }
     return;
   }
   await loadAccounts();
