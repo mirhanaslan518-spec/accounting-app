@@ -3,126 +3,77 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Faturalar</title>
+<title>Ana Sayfa</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <nav class="topnav">
-    <a href="index.html" class="topnav-brand">← Ana Sayfa</a>
-    <div class="topnav-links">
-      <a href="quotes.html">Teklifler</a>
-      <a href="invoices.html">Faturalar</a>
-      <a href="customers.html">Müşteriler</a>
-      <a href="products.html">Ürünler</a>
-      <a href="accounts.html">Kasa/Banka</a>
-    </div>
-    <button id="logout-btn" class="topnav-logout">Çıkış Yap</button>
-  </nav>
+  <div id="login-wrapper">
+    <main class="card">
+      <header class="header">
+        <p class="eyebrow">GİRİŞ</p>
+        <h1>Hesabınıza Giriş Yapın</h1>
+        <p class="subtitle">Devam etmek için e-posta ve şifrenizi girin.</p>
+      </header>
 
-  <main class="container">
-    <div class="page-header">
-      <h1>Satış Faturaları</h1>
-      <button id="new-invoice-btn">+ Yeni Fatura</button>
-    </div>
+      <section id="login-section">
+        <form id="login-form">
+          <label for="email">E-posta</label>
+          <input type="email" id="email" required autocomplete="username">
+          <label for="password">Şifre</label>
+          <input type="password" id="password" required autocomplete="current-password">
+          <button type="submit">Giriş Yap</button>
+          <p id="login-error" class="error"></p>
+        </form>
+      </section>
+    </main>
+  </div>
 
-    <div id="invoice-list" class="customer-list">
-      <p class="empty-state">Yükleniyor...</p>
-    </div>
+  <div id="app-section" class="hidden">
+    <nav class="topnav">
+      <span class="topnav-brand">Ana Sayfa</span>
+      <div class="topnav-links">
+        <a href="quotes.html">Teklifler</a>
+        <a href="invoices.html">Faturalar</a>
+        <a href="customers.html">Müşteriler</a>
+        <a href="products.html">Ürünler</a>
+        <a href="accounts.html">Kasa/Banka</a>
+      </div>
+      <button id="logout-btn" class="topnav-logout">Çıkış Yap</button>
+    </nav>
+    <main class="container">
+      <dl class="status-grid">
+        <dt>Giriş yapan</dt><dd id="user-email">—</dd>
+        <dt>Şirket</dt><dd id="company-name">—</dd>
+      </dl>
 
-    <!-- Powers the autocomplete on each line item's description field. -->
-    <datalist id="product-options"></datalist>
-
-    <div id="invoice-form-overlay" class="overlay hidden">
-      <form id="invoice-form" class="customer-form">
-        <h2 id="invoice-form-title">Yeni Fatura</h2>
-
-        <fieldset>
-          <legend>Fatura Bilgileri</legend>
-          <label>Fatura İsmi
-            <input type="text" id="invoice_name">
-          </label>
-          <label>Müşteri *
-            <select id="customer_id" required></select>
-          </label>
-          <label>Fatura No
-            <input type="text" id="invoice_number">
-          </label>
-          <label>Düzenleme Tarihi
-            <input type="date" id="issue_date" required>
-          </label>
-          <label>Vade Tarihi
-            <input type="date" id="due_date">
-          </label>
-          <div class="due-date-presets">
-            <button type="button" class="preset-btn" data-days="0">Aynı Gün</button>
-            <button type="button" class="preset-btn" data-days="7">7 Gün</button>
-            <button type="button" class="preset-btn" data-days="14">14 Gün</button>
-            <button type="button" class="preset-btn" data-days="30">30 Gün</button>
-            <button type="button" class="preset-btn" data-days="60">60 Gün</button>
-          </div>
-          <label>Döviz
-            <select id="currency">
-              <option value="TRY">TRY</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-            </select>
-          </label>
-          <p class="hint">Tahsilat durumu artık fatura listesindeki "Tahsil Edildi Yap" düğmesinden ayarlanır — hangi kasa/banka hesabına ve hangi tarihte tahsil edildiğini orada belirtirsiniz.</p>
-        </fieldset>
-
-        <fieldset>
-          <legend>Kalemler</legend>
-          <div id="line-items"></div>
-          <button type="button" id="add-line-btn" class="secondary">+ Yeni Satır Ekle</button>
-        </fieldset>
-
-        <div class="totals-box">
-          <div><span>Ara Toplam</span><strong id="totals-subtotal">0.00</strong></div>
-          <div><span>Toplam KDV</span><strong id="totals-tax">0.00</strong></div>
-          <div class="totals-grand"><span>Genel Toplam</span><strong id="totals-grand">0.00</strong></div>
+      <div class="stats-grid">
+        <div class="stat-card stat-card-primary">
+          <span class="stat-label">Toplam Tahsil Edilecek</span>
+          <strong class="stat-value" id="stat-total">0.00</strong>
         </div>
-
-        <label>Notlar
-          <textarea id="notes"></textarea>
-        </label>
-
-        <p id="invoice-form-error" class="error"></p>
-
-        <div class="form-actions">
-          <button type="button" id="invoice-cancel-btn" class="secondary">Vazgeç</button>
-          <button type="submit">Kaydet</button>
+        <div class="stat-card">
+          <span class="stat-label">Vadesi Gelecek</span>
+          <strong class="stat-value" id="stat-upcoming">0.00</strong>
         </div>
-      </form>
-    </div>
-
-    <!-- Small modal shown when marking an invoice as collected — asks which
-         account received the money and on what date. -->
-    <div id="collect-modal-overlay" class="overlay hidden">
-      <form id="collect-form" class="customer-form">
-        <h2>Tahsil Edildi Olarak İşaretle</h2>
-
-        <label>Tahsilat Tarihi
-          <input type="date" id="collect_date" required>
-        </label>
-        <label>Hesap *
-          <select id="collect_account_id" required></select>
-        </label>
-
-        <p id="collect-form-error" class="error"></p>
-
-        <div class="form-actions">
-          <button type="button" id="collect-cancel-btn" class="secondary">Vazgeç</button>
-          <button type="submit">Onayla</button>
+        <div class="stat-card stat-card-fail">
+          <span class="stat-label">Gecikmiş</span>
+          <strong class="stat-value" id="stat-overdue">0.00</strong>
         </div>
-      </form>
-    </div>
-  </main>
+        <div class="stat-card stat-card-neutral">
+          <span class="stat-label">Planlanmamış</span>
+          <strong class="stat-value" id="stat-unplanned">0.00</strong>
+        </div>
+      </div>
+
+      <p class="hint">Soldaki menüden Teklifler, Faturalar, Müşteriler, Ürünler veya Kasa/Banka sayfasına gidebilirsiniz.</p>
+    </main>
+  </div>
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
     window.supabase = { createClient };
   </script>
   <script src="shared.js" defer></script>
-  <script src="invoices.js" defer></script>
+  <script src="app.js" defer></script>
 </body>
 </html>
