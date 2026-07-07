@@ -30,7 +30,6 @@ body {
   min-height: 100vh;
   padding: 24px;
 }
-/* Must come after #login-wrapper so it wins over the ID's own display:flex. */
 #login-wrapper.hidden { display: none; }
 
 .card {
@@ -87,7 +86,6 @@ input:focus, select:focus, textarea:focus {
   outline-offset: 1px;
 }
 
-/* Remove the up/down spinner arrows on number inputs everywhere in the app. */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -176,7 +174,7 @@ button:hover { opacity: 0.9; }
   border-bottom: 1px solid var(--border);
 }
 .topnav-brand { color: var(--accent); text-decoration: none; font-size: 13px; }
-.topnav-links { display: flex; gap: 16px; }
+.topnav-links { display: flex; gap: 16px; flex-wrap: wrap; }
 .topnav-links a { color: var(--text); text-decoration: none; font-size: 13px; }
 .topnav-links a:hover { color: var(--accent); }
 .topnav-logout {
@@ -208,6 +206,25 @@ button:hover { opacity: 0.9; }
 
 .search-box { margin-bottom: 16px; font-size: 13px; }
 
+/* ---------- Filter bar (quotes.html) ---------- */
+
+.filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.filter-btn {
+  width: auto;
+  margin: 0;
+  padding: 7px 14px;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.filter-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #14171a;
+  font-weight: 600;
+}
+
 .empty-state {
   color: var(--muted);
   font-size: 13px;
@@ -215,7 +232,7 @@ button:hover { opacity: 0.9; }
   padding: 24px 0;
 }
 
-/* ---------- Shared list/card styles (customers + invoices) ---------- */
+/* ---------- Shared list/card styles (customers + invoices + quotes) ---------- */
 
 .customer-list { display: flex; flex-direction: column; gap: 8px; }
 
@@ -238,6 +255,9 @@ button:hover { opacity: 0.9; }
 .edit-btn { background: transparent; border: 1px solid var(--border); color: var(--text); }
 .delete-btn { background: transparent; border: 1px solid var(--fail); color: var(--fail); }
 .toggle-btn { background: transparent; border: 1px solid var(--ok); color: var(--ok); }
+.reject-btn { background: transparent; border: 1px solid var(--fail); color: var(--fail); }
+.convert-btn { background: transparent; border: 1px solid var(--ok); color: var(--ok); }
+.converted-note { font-size: 11px; color: var(--muted); }
 .invoice-total { font-size: 13px; margin-right: 4px; }
 
 .status-badge {
@@ -253,7 +273,7 @@ button:hover { opacity: 0.9; }
 .status-fail { background: rgba(217, 83, 79, 0.15); color: var(--fail); }
 .status-neutral { background: rgba(139, 148, 158, 0.15); color: var(--muted); }
 
-/* ---------- Overlay + form (shared by Customers and Invoices) ---------- */
+/* ---------- Overlay + form (shared by Customers, Invoices, Quotes...) ---------- */
 
 .overlay {
   position: fixed;
@@ -266,12 +286,9 @@ button:hover { opacity: 0.9; }
   overflow-y: auto;
   z-index: 10;
 }
-/* Must come after .overlay so it wins the display tie-break. */
 .overlay.hidden { display: none; }
 
 .customer-form {
-  /* min-width: 0 overrides the flex-item default that was forcing this
-     form wider than its own max-width because of the line items inside it. */
   min-width: 0;
   background: var(--panel);
   border: 1px solid var(--border);
@@ -282,8 +299,6 @@ button:hover { opacity: 0.9; }
 }
 .customer-form h2 { margin: 0 0 16px; font-size: 18px; }
 .customer-form fieldset {
-  /* fieldset elements have a long-standing browser quirk where they refuse
-     to shrink below their content's width unless min-width is set explicitly. */
   min-width: 0;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -297,7 +312,7 @@ button:hover { opacity: 0.9; }
 .form-actions button { margin-top: 0; }
 button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
 
-/* ---------- Invoice-specific: due date presets ---------- */
+/* ---------- Due date / validity date presets ---------- */
 
 .due-date-presets { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 4px; }
 .preset-btn {
@@ -310,7 +325,7 @@ button.secondary { background: transparent; border: 1px solid var(--border); col
   color: var(--text);
 }
 
-/* ---------- Invoice-specific: line items ---------- */
+/* ---------- Line items (invoices + quotes) ---------- */
 
 #line-items {
   min-width: 0;
@@ -345,7 +360,7 @@ button.secondary { background: transparent; border: 1px solid var(--border); col
   color: var(--fail);
 }
 
-/* ---------- Invoice-specific: totals box ---------- */
+/* ---------- Totals box (invoices + quotes) ---------- */
 
 .totals-box {
   background: var(--bg);
