@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tedarikçiler</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="topnav">
+    <a href="index.html" class="topnav-brand">← Ana Sayfa</a>
+    <div class="topnav-links">
+      <a href="quotes.html">Teklifler</a>
+      <a href="invoices.html">Faturalar</a>
+      <a href="customers.html">Müşteriler</a>
+      <a href="products.html">Ürünler</a>
+      <a href="suppliers.html">Tedarikçiler</a>
+      <a href="employees.html">Çalışanlar</a>
+      <a href="accounts.html">Kasa/Banka</a>
+    </div>
+    <button id="logout-btn" class="topnav-logout">Çıkış Yap</button>
+  </nav>
+
+  <main class="container">
+    <div class="page-header">
+      <h1>Tedarikçiler</h1>
+      <button id="new-supplier-btn">+ Yeni Tedarikçi</button>
+    </div>
+
+    <input type="text" id="search-input" class="search-box" placeholder="Tedarikçi ara...">
+
+    <div id="supplier-list" class="customer-list">
+      <p class="empty-state">Yükleniyor...</p>
+    </div>
+
+    <div id="supplier-form-overlay" class="overlay hidden">
+      <form id="supplier-form" class="customer-form">
+        <h2 id="supplier-form-title">Yeni Tedarikçi</h2>
+
+        <fieldset>
+          <legend>Temel Bilgiler</legend>
+          <label>Tür
+            <select id="supplier_type">
+              <option value="tuzel">Tüzel Kişi</option>
+              <option value="gercek">Gerçek Kişi</option>
+            </select>
+          </label>
+          <label>Firma Unvanı *
+            <input type="text" id="company_title" required>
+          </label>
+          <label>Kısa İsim
+            <input type="text" id="short_name">
+          </label>
+          <label>VKN / TCKN
+            <input type="text" id="tax_id">
+          </label>
+          <label>Vergi Dairesi
+            <input type="text" id="tax_office">
+          </label>
+          <label>Kategori
+            <input type="text" id="category">
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>İletişim</legend>
+          <label>E-posta Adresi
+            <input type="email" id="email">
+          </label>
+          <label>Telefon Numarası
+            <input type="text" id="phone">
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Adres ve Finansal</legend>
+          <label>Açık Adres
+            <textarea id="address"></textarea>
+          </label>
+          <label>IBAN Numarası
+            <input type="text" id="iban">
+          </label>
+        </fieldset>
+
+        <label>Notlar
+          <textarea id="notes"></textarea>
+        </label>
+
+        <p id="supplier-form-error" class="error"></p>
+
+        <div class="form-actions">
+          <button type="button" id="supplier-cancel-btn" class="secondary">Vazgeç</button>
+          <button type="submit">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    window.supabase = { createClient };
+  </script>
+  <script src="shared.js" defer></script>
+  <script src="suppliers.js" defer></script>
+</body>
+</html>

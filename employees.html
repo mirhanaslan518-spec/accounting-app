@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Çalışanlar</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="topnav">
+    <a href="index.html" class="topnav-brand">← Ana Sayfa</a>
+    <div class="topnav-links">
+      <a href="quotes.html">Teklifler</a>
+      <a href="invoices.html">Faturalar</a>
+      <a href="customers.html">Müşteriler</a>
+      <a href="products.html">Ürünler</a>
+      <a href="suppliers.html">Tedarikçiler</a>
+      <a href="employees.html">Çalışanlar</a>
+      <a href="accounts.html">Kasa/Banka</a>
+    </div>
+    <button id="logout-btn" class="topnav-logout">Çıkış Yap</button>
+  </nav>
+
+  <main class="container">
+    <div class="page-header">
+      <h1>Çalışanlar</h1>
+      <button id="new-employee-btn">+ Yeni Çalışan</button>
+    </div>
+
+    <input type="text" id="search-input" class="search-box" placeholder="Çalışan ara...">
+
+    <div id="employee-list" class="customer-list">
+      <p class="empty-state">Yükleniyor...</p>
+    </div>
+
+    <div id="employee-form-overlay" class="overlay hidden">
+      <form id="employee-form" class="customer-form">
+        <h2 id="employee-form-title">Yeni Çalışan</h2>
+
+        <label>Adı Soyadı *
+          <input type="text" id="full_name" required>
+        </label>
+        <label>E-posta
+          <input type="email" id="email">
+        </label>
+        <label>TC Kimlik No
+          <input type="text" id="national_id">
+        </label>
+        <label>IBAN
+          <input type="text" id="iban">
+        </label>
+
+        <p id="employee-form-error" class="error"></p>
+
+        <div class="form-actions">
+          <button type="button" id="employee-cancel-btn" class="secondary">Vazgeç</button>
+          <button type="submit">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    window.supabase = { createClient };
+  </script>
+  <script src="shared.js" defer></script>
+  <script src="employees.js" defer></script>
+</body>
+</html>
