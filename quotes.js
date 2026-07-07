@@ -122,11 +122,18 @@ function renderList() {
       `;
     } else if (q.status === "kabul_edildi") {
       actionButtons = `<button class="toggle-btn" data-id="${q.id}" data-action="beklemede">Beklemede Yap</button>`;
-      actionButtons += q.converted_invoice_id
-        ? `<span class="converted-note">Faturalandırıldı</span>`
-        : `<button class="convert-btn" data-id="${q.id}">Faturalandır</button>`;
+      if (!q.converted_invoice_id) {
+        actionButtons += `<button class="convert-btn" data-id="${q.id}">Faturalandır</button>`;
+      }
     } else {
       actionButtons = `<button class="toggle-btn" data-id="${q.id}" data-action="beklemede">Beklemede Yap</button>`;
+    }
+
+    // Conversion is permanent, regardless of what the quote's status gets
+    // changed to afterward — so this note shows no matter which status
+    // branch above fired, instead of only inside the "kabul_edildi" one.
+    if (q.converted_invoice_id) {
+      actionButtons += `<span class="converted-note">Faturalandırıldı</span>`;
     }
 
     const card = document.createElement("div");
