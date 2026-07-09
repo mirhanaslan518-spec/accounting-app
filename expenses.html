@@ -84,10 +84,10 @@
         <!-- Shown only for Hızlı Fiş/Fatura -->
         <fieldset id="manual-totals-group">
           <legend>Tutar</legend>
-          <label>Toplam Tutar (KDV Dahil)
+          <label>Tutar (KDV Hariç)
             <input type="number" step="0.01" id="manual_total" value="0">
           </label>
-          <label>Toplam KDV
+          <label>KDV
             <input type="number" step="0.01" id="manual_tax" value="0">
           </label>
         </fieldset>
@@ -114,6 +114,28 @@
         <div class="form-actions">
           <button type="button" id="expense-cancel-btn" class="secondary">Vazgeç</button>
           <button type="submit">Kaydet</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Small modal shown when marking a gider as paid — asks which
+         account it was paid from and on what date. -->
+    <div id="pay-modal-overlay" class="overlay hidden">
+      <form id="pay-form" class="customer-form">
+        <h2>Ödendi Olarak İşaretle</h2>
+
+        <label>Ödeme Tarihi
+          <input type="date" id="pay_date" required>
+        </label>
+        <label>Hesap *
+          <select id="pay_account_id" required></select>
+        </label>
+
+        <p id="pay-form-error" class="error"></p>
+
+        <div class="form-actions">
+          <button type="button" id="pay-cancel-btn" class="secondary">Vazgeç</button>
+          <button type="submit">Onayla</button>
         </div>
       </form>
     </div>
