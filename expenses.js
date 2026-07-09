@@ -7,9 +7,11 @@
 let currentCompanyId = null;
 let allExpenses = [];
 let allProducts = [];
+let allAccounts = [];
 let editingId = null;              // null = new expense, otherwise = id being edited
 let currentExpenseType = "fis_fatura"; // which mode the open form is in
 let currentFilter = "all";
+let pendingPayId = null;           // which expense the pay-modal is currently acting on
 
 const listEl = document.getElementById("expense-list");
 const newQuickBtn = document.getElementById("new-quick-btn");
@@ -26,6 +28,11 @@ const manualTotalsGroup = document.getElementById("manual-totals-group");
 const linesGroup = document.getElementById("lines-group");
 const computedTotalsBox = document.getElementById("computed-totals-box");
 
+const payOverlay = document.getElementById("pay-modal-overlay");
+const payForm = document.getElementById("pay-form");
+const payError = document.getElementById("pay-form-error");
+const payCancelBtn = document.getElementById("pay-cancel-btn");
+
 // ---- STARTUP --------------------------------------------------------------
 async function init() {
   const session = await requireSession();
@@ -40,6 +47,7 @@ async function init() {
 
   await loadSupplierOptions();
   await loadProductOptions();
+  await loadAccounts();
   await loadExpenses();
 }
 
@@ -81,13 +89,35 @@ async function loadProductOptions() {
   });
 }
 
+// ---- ACCOUNTS (for the payment modal) ------------------------------------------
+async function loadAccounts() {
+  const { data } = await sb
+    .from("accounts")
+    .select("id, name, account_type")
+    .eq("company_id", currentCompanyId)
+    .order("name", { ascending: true });
+
+  allAccounts = data || [];
+}
+
+function populateAccountSelect() {
+  const select = document.getElementById("pay_account_id");
+  select.innerHTML = `<option value="">Seçiniz...</option>`;
+  allAccounts.forEach((a) => {
+    const opt = document.createElement("option");
+    opt.value = a.id;
+    opt.textContent = `${a.name} (${a.account_type === "banka" ? "Banka" : "Kasa"})`;
+    select.appendChild(opt);
+  });
+}
+
 // ---- LOAD + RENDER THE EXPENSE LIST -----------------------------------------
 async function loadExpenses() {
   listEl.innerHTML = `<p class="empty-state">Yükleniyor...</p>`;
 
   const { data, error } = await sb
     .from("expenses")
-    .select("*, suppliers(company_title)")
+    .select("*, suppliers(company_title), accounts(name)")
     .eq("company_id", currentCompanyId)
     .order("receipt_date", { ascending: false });
 
@@ -118,12 +148,16 @@ function renderList() {
     const toggleTarget = isPaid ? "odenecek" : "odendi";
     const toggleLabel = isPaid ? "Ödenecek Yap" : "Ödendi Yap";
 
+    const paidInfo = isPaid && x.accounts
+      ? ` · ${escapeHtml(x.accounts.name)}${x.paid_date ? " (" + x.paid_date + ")" : ""}`
+      : "";
+
     const card = document.createElement("div");
     card.className = "customer-card";
     card.innerHTML = `
       <div class="customer-card-main">
         <strong>${escapeHtml(x.expense_name || "Gider")}</strong>
-        <span class="customer-card-sub">${escapeHtml(x.suppliers ? x.suppliers.company_title : "")} · ${x.receipt_date || ""} · ${typeLabel}</span>
+        <span class="customer-card-sub">${escapeHtml(x.suppliers ? x.suppliers.company_title : "")} · ${x.receipt_date || ""} · ${typeLabel}${paidInfo}</span>
         <span class="status-badge ${statusCls}">${statusLabel}</span>
       </div>
       <div class="customer-card-actions">
@@ -163,15 +197,68 @@ document.querySelectorAll(".filter-btn").forEach((btn) => {
   });
 });
 
-// ---- QUICK PAYMENT STATUS TOGGLE -----------------------------------------------
+// ---- PAYMENT STATUS: paying out requires an account + date --------------------
 async function updatePaymentStatus(id, newStatus) {
-  const { error } = await sb.from("expenses").update({ payment_status: newStatus }).eq("id", id);
-  if (error) {
-    alert(`Güncellenemedi: ${error.message}`);
+  if (newStatus === "odenecek") {
+    // Undo is simple: flip back and clear the payment details.
+    const { error } = await sb.from("expenses").update({
+      payment_status: "odenecek",
+      paid_date: null,
+      account_id: null,
+    }).eq("id", id);
+
+    if (error) {
+      alert(`Güncellenemedi: ${error.message}`);
+      return;
+    }
+    await loadExpenses();
     return;
   }
-  await loadExpenses();
+
+  if (allAccounts.length === 0) {
+    alert("Önce en az bir Kasa/Banka hesabı oluşturmalısınız (Kasa/Banka sayfası).");
+    return;
+  }
+
+  pendingPayId = id;
+  payError.textContent = "";
+  document.getElementById("pay_date").value = new Date().toISOString().slice(0, 10);
+  populateAccountSelect();
+  payOverlay.classList.remove("hidden");
 }
+
+payForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  payError.textContent = "";
+
+  const date = document.getElementById("pay_date").value;
+  const accountId = document.getElementById("pay_account_id").value;
+
+  if (!accountId) {
+    payError.textContent = "Hesap seçilmelidir.";
+    return;
+  }
+
+  const { error } = await sb.from("expenses").update({
+    payment_status: "odendi",
+    paid_date: date,
+    account_id: accountId,
+  }).eq("id", pendingPayId);
+
+  if (error) {
+    payError.textContent = error.message;
+    return;
+  }
+
+  payOverlay.classList.add("hidden");
+  pendingPayId = null;
+  await loadExpenses();
+});
+
+payCancelBtn.addEventListener("click", () => {
+  payOverlay.classList.add("hidden");
+  pendingPayId = null;
+});
 
 // ---- DELETE ---------------------------------------------------------------
 async function deleteExpense(id) {
@@ -362,7 +449,11 @@ async function openForEdit(id) {
     if (!lines || lines.length === 0) lineItemsEl.appendChild(createLineItemRow());
     recalcTotals();
   } else {
-    document.getElementById("manual_total").value = x.total_amount ?? 0;
+    // total_amount is always stored as the GROSS figure (net + tax), so the
+    // net field must be back-computed from it — never populate it with
+    // total_amount directly, or re-saving would silently add the tax twice.
+    const net = Number(x.total_amount || 0) - Number(x.tax_total || 0);
+    document.getElementById("manual_total").value = net;
     document.getElementById("manual_tax").value = x.tax_total ?? 0;
   }
 
@@ -373,7 +464,7 @@ function closeForm() {
   overlay.classList.add("hidden");
 }
 
-// ---- SAVE (CALLS THE POSTGRES FUNCTIONS FROM sprint7_expenses.sql) --------------
+// ---- SAVE (CALLS THE POSTGRES FUNCTIONS FROM sprint7_expenses.sql / sprint7_fix.sql) --------
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   formError.textContent = "";
