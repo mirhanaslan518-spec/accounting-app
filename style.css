@@ -140,11 +140,20 @@ button:hover { opacity: 0.9; }
 
 /* ---------- Dashboard stat cards (index.html) ---------- */
 
+.section-title {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 24px 0 8px;
+}
+.section-title:first-of-type { margin-top: 4px; }
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
-  margin: 4px 0 24px;
+  margin: 4px 0;
 }
 .stat-card {
   background: var(--panel);
@@ -204,12 +213,11 @@ button:hover { opacity: 0.9; }
 .page-header h1 { margin: 0; font-size: 20px; }
 .page-header button { width: auto; margin: 0; padding: 9px 16px; }
 
-/* Pages with two header buttons (e.g. Giderler: Hızlı + Detaylı) */
 .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .search-box { margin-bottom: 16px; font-size: 13px; }
 
-/* ---------- Filter bar (quotes.html, expenses.html) ---------- */
+/* ---------- Filter bar ---------- */
 
 .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
 .filter-btn {
@@ -260,6 +268,8 @@ button:hover { opacity: 0.9; }
 .toggle-btn { background: transparent; border: 1px solid var(--ok); color: var(--ok); }
 .reject-btn { background: transparent; border: 1px solid var(--fail); color: var(--fail); }
 .convert-btn { background: transparent; border: 1px solid var(--ok); color: var(--ok); }
+.account-pay-btn { background: transparent; border: 1px solid var(--ok); color: var(--ok); }
+.employee-pay-btn { background: transparent; border: 1px solid var(--ok); color: var(--ok); }
 .converted-note { font-size: 11px; color: var(--muted); }
 .invoice-total { font-size: 13px; margin-right: 4px; }
 
@@ -328,7 +338,7 @@ button.secondary { background: transparent; border: 1px solid var(--border); col
   color: var(--text);
 }
 
-/* ---------- Line items (invoices + quotes + expenses) ---------- */
+/* ---------- Line items ---------- */
 
 #line-items {
   min-width: 0;
