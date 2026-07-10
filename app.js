@@ -1,7 +1,7 @@
 // =========================================================
 // app.js — logic for the Home / login page (index.html)
 // Relies on shared.js being loaded first (sb, requireSession,
-// getMyCompany, categorizeInvoice).
+// getMyCompany, categorizeInvoice, categorizeExpense).
 // =========================================================
 
 const loginWrapper = document.getElementById("login-wrapper");
@@ -39,11 +39,16 @@ async function showApp(session) {
   }
 }
 
-// ---- DASHBOARD: Toplam Tahsil Edilecek / Vadesi Gelecek / Gecikmiş / Planlanmamış ----
-// Note: this adds amounts across all invoices regardless of currency. If you start
-// billing in more than one currency, these totals will mix them together — worth
-// splitting by currency at that point, but not needed yet at your current scale.
+// ---- DASHBOARD: Tahsilatlar + Ödemeler ------------------------------------------
+// Note: amounts are summed across all invoices/expenses regardless of
+// currency. Fine at your current scale — worth splitting by currency later
+// if you start billing/paying in more than one.
 async function loadDashboard(companyId) {
+  await loadReceivables(companyId);
+  await loadPayables(companyId);
+}
+
+async function loadReceivables(companyId) {
   const { data: invoices, error } = await sb
     .from("invoices")
     .select("grand_total, due_date, collection_status")
@@ -51,14 +56,11 @@ async function loadDashboard(companyId) {
 
   if (error || !invoices) return;
 
-  let totalReceivable = 0;
-  let upcoming = 0;
-  let overdue = 0;
-  let unplanned = 0;
+  let totalReceivable = 0, upcoming = 0, overdue = 0, unplanned = 0;
 
   invoices.forEach((inv) => {
     const status = categorizeInvoice(inv);
-    if (status.key === "tahsil_edildi") return; // already collected, not part of receivables
+    if (status.key === "tahsil_edildi") return;
 
     const amount = Number(inv.grand_total) || 0;
     totalReceivable += amount;
@@ -72,6 +74,34 @@ async function loadDashboard(companyId) {
   document.getElementById("stat-upcoming").textContent = upcoming.toFixed(2);
   document.getElementById("stat-overdue").textContent = overdue.toFixed(2);
   document.getElementById("stat-unplanned").textContent = unplanned.toFixed(2);
+}
+
+async function loadPayables(companyId) {
+  const { data: expenses, error } = await sb
+    .from("expenses")
+    .select("total_amount, due_date, payment_status")
+    .eq("company_id", companyId);
+
+  if (error || !expenses) return;
+
+  let totalPayable = 0, upcoming = 0, overdue = 0, unplanned = 0;
+
+  expenses.forEach((x) => {
+    const status = categorizeExpense(x);
+    if (status.key === "odendi") return; // covers both Ödendi and Çalışan Cebinden Ödedi
+
+    const amount = Number(x.total_amount) || 0;
+    totalPayable += amount;
+
+    if (status.key === "gecikmis") overdue += amount;
+    else if (status.key === "planlanmamis") unplanned += amount;
+    else upcoming += amount;
+  });
+
+  document.getElementById("pay-stat-total").textContent = totalPayable.toFixed(2);
+  document.getElementById("pay-stat-upcoming").textContent = upcoming.toFixed(2);
+  document.getElementById("pay-stat-overdue").textContent = overdue.toFixed(2);
+  document.getElementById("pay-stat-unplanned").textContent = unplanned.toFixed(2);
 }
 
 loginForm.addEventListener("submit", async (e) => {
