@@ -35,10 +35,7 @@ async function getMyCompany(userId) {
 }
 
 // ---- 4. CATEGORIZE AN INVOICE ------------------------------------------
-// Mirrors the Tahsilatlar categories from the original paraşüt layout:
-// Tahsil Edildi (already paid), Gecikmiş (overdue), Planlanmamış (no due
-// date set yet), or Tahsil Edilecek (upcoming, normal). Used by both the
-// invoices list and the home dashboard, so it only needs to be written once.
+// Tahsil Edildi / Gecikmiş / Planlanmamış / Tahsil Edilecek.
 function categorizeInvoice(inv) {
   if (inv.collection_status === "tahsil_edildi") {
     return { key: "tahsil_edildi", label: "Tahsil Edildi", cls: "status-ok" };
@@ -51,4 +48,26 @@ function categorizeInvoice(inv) {
     return { key: "gecikmis", label: "Gecikmiş", cls: "status-fail" };
   }
   return { key: "tahsil_edilecek", label: "Tahsil Edilecek", cls: "status-pending" };
+}
+
+// ---- 5. CATEGORIZE AN EXPENSE -------------------------------------------
+// Mirrors categorizeInvoice for the Ödemeler side. Both "Ödendi" and
+// "Çalışan Cebinden Ödedi" count as settled (money has already left the
+// business either way) and are excluded from outstanding totals — they
+// just get different labels/colors so you can tell them apart in the list.
+function categorizeExpense(x) {
+  if (x.payment_status === "odendi") {
+    return { key: "odendi", label: "Ödendi", cls: "status-ok" };
+  }
+  if (x.payment_status === "calisan_cebinden_odedi") {
+    return { key: "odendi", label: "Çalışan Cebinden Ödedi", cls: "status-neutral" };
+  }
+  if (!x.due_date) {
+    return { key: "planlanmamis", label: "Planlanmamış", cls: "status-neutral" };
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  if (x.due_date < today) {
+    return { key: "gecikmis", label: "Gecikmiş", cls: "status-fail" };
+  }
+  return { key: "odenecek", label: "Ödenecek", cls: "status-pending" };
 }
