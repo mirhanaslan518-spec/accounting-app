@@ -28,6 +28,7 @@
       <div class="header-actions">
         <button id="new-quick-btn">+ Hızlı Fiş/Fatura</button>
         <button id="new-detailed-btn">+ Detaylı Fiş/Fatura</button>
+        <button id="new-payroll-btn">+ Maaş/Prim</button>
       </div>
     </div>
 
@@ -35,6 +36,7 @@
       <button type="button" class="filter-btn active" data-filter="all">Tümü</button>
       <button type="button" class="filter-btn" data-filter="odenecek">Ödenecek</button>
       <button type="button" class="filter-btn" data-filter="odendi">Ödendi</button>
+      <button type="button" class="filter-btn" data-filter="calisan_cebinden_odedi">Çalışan Cebinden Ödedi</button>
     </div>
 
     <div id="expense-list" class="customer-list">
@@ -54,9 +56,19 @@
           <label>Kayıt İsmi
             <input type="text" id="expense_name">
           </label>
-          <label>Tedarikçi
-            <select id="supplier_id"></select>
-          </label>
+
+          <div id="supplier-field-group">
+            <label>Tedarikçi
+              <select id="supplier_id"></select>
+            </label>
+          </div>
+
+          <div id="employee-field-group" class="hidden">
+            <label>Çalışan
+              <select id="employee_id"></select>
+            </label>
+          </div>
+
           <label>Fiş/Fatura Tarihi
             <input type="date" id="receipt_date" required>
           </label>
@@ -70,18 +82,13 @@
               <option value="EUR">EUR</option>
             </select>
           </label>
-          <label>Ödeme Durumu
-            <select id="payment_status">
-              <option value="odenecek">Ödenecek</option>
-              <option value="odendi">Ödendi</option>
-            </select>
-          </label>
           <label>Ödeneceği Tarih
             <input type="date" id="due_date">
           </label>
+          <p class="hint">Ödeme durumu bu formdan değil, gider listesindeki "Ödendi Yap" / "Çalışan Cebinden Ödedi Yap" düğmelerinden ayarlanır — hangi hesaptan veya kimin cebinden ödendiğini orada belirtirsiniz.</p>
         </fieldset>
 
-        <!-- Shown only for Hızlı Fiş/Fatura -->
+        <!-- Shown for Hızlı Fiş/Fatura and Maaş/Prim -->
         <fieldset id="manual-totals-group">
           <legend>Tutar</legend>
           <label>Tutar (KDV Hariç)
@@ -118,8 +125,7 @@
       </form>
     </div>
 
-    <!-- Small modal shown when marking a gider as paid — asks which
-         account it was paid from and on what date. -->
+    <!-- Marking as paid from a Kasa/Banka account -->
     <div id="pay-modal-overlay" class="overlay hidden">
       <form id="pay-form" class="customer-form">
         <h2>Ödendi Olarak İşaretle</h2>
@@ -135,6 +141,27 @@
 
         <div class="form-actions">
           <button type="button" id="pay-cancel-btn" class="secondary">Vazgeç</button>
+          <button type="submit">Onayla</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Marking as paid out of an employee's own pocket -->
+    <div id="employee-pay-modal-overlay" class="overlay hidden">
+      <form id="employee-pay-form" class="customer-form">
+        <h2>Çalışan Cebinden Ödendi Olarak İşaretle</h2>
+
+        <label>Ödeme Tarihi
+          <input type="date" id="employee_pay_date" required>
+        </label>
+        <label>Çalışan *
+          <select id="employee_pay_id" required></select>
+        </label>
+
+        <p id="employee-pay-form-error" class="error"></p>
+
+        <div class="form-actions">
+          <button type="button" id="employee-pay-cancel-btn" class="secondary">Vazgeç</button>
           <button type="submit">Onayla</button>
         </div>
       </form>
