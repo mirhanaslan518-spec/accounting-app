@@ -35,7 +35,6 @@ async function getMyCompany(userId) {
 }
 
 // ---- 4. CATEGORIZE AN INVOICE ------------------------------------------
-// Tahsil Edildi / Gecikmiş / Planlanmamış / Tahsil Edilecek.
 function categorizeInvoice(inv) {
   if (inv.collection_status === "tahsil_edildi") {
     return { key: "tahsil_edildi", label: "Tahsil Edildi", cls: "status-ok" };
@@ -51,10 +50,6 @@ function categorizeInvoice(inv) {
 }
 
 // ---- 5. CATEGORIZE AN EXPENSE -------------------------------------------
-// Mirrors categorizeInvoice for the Ödemeler side. Both "Ödendi" and
-// "Çalışan Cebinden Ödedi" count as settled (money has already left the
-// business either way) and are excluded from outstanding totals — they
-// just get different labels/colors so you can tell them apart in the list.
 function categorizeExpense(x) {
   if (x.payment_status === "odendi") {
     return { key: "odendi", label: "Ödendi", cls: "status-ok" };
@@ -71,3 +66,69 @@ function categorizeExpense(x) {
   }
   return { key: "odenecek", label: "Ödenecek", cls: "status-pending" };
 }
+
+// ---- 6. DATE RANGE PRESETS (used by every report) ------------------------
+// Returns { from: "YYYY-MM-DD", to: "YYYY-MM-DD" } for a named preset.
+function getDateRangeForPreset(preset) {
+  const toStr = (d) => d.toISOString().slice(0, 10);
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const q = Math.floor(m / 3);
+
+  switch (preset) {
+    case "this_month":
+      return { from: toStr(new Date(y, m, 1)), to: toStr(new Date(y, m + 1, 0)) };
+    case "last_month":
+      return { from: toStr(new Date(y, m - 1, 1)), to: toStr(new Date(y, m, 0)) };
+    case "this_quarter":
+      return { from: toStr(new Date(y, q * 3, 1)), to: toStr(new Date(y, q * 3 + 3, 0)) };
+    case "last_quarter":
+      return { from: toStr(new Date(y, q * 3 - 3, 1)), to: toStr(new Date(y, q * 3, 0)) };
+    case "this_year":
+      return { from: `${y}-01-01`, to: `${y}-12-31` };
+    case "last_year":
+      return { from: `${y - 1}-01-01`, to: `${y - 1}-12-31` };
+    default:
+      return { from: null, to: null };
+  }
+}
+
+// ---- 7. DATE RANGE WIDGET ------------------------------------------------
+// Wires up a preset-buttons-plus-custom-dates block. Expects this structure
+// inside the element with id = widgetId:
+//   .filter-btn[data-range="..."]  (one of the presets above, or "custom")
+//   .custom-date-range             (wrapper, hidden by default)
+//     .custom-from / .custom-to    (date inputs)
+//     .custom-apply                (button)
+// Calls onChange({from, to}) whenever the selection changes, and once
+// immediately with "this_month" so every report has a sensible default.
+function initDateRangeFilter(widgetId, onChange) {
+  const widget = document.getElementById(widgetId);
+  const buttons = widget.querySelectorAll(".filter-btn");
+  const customRow = widget.querySelector(".custom-date-range");
+  const customFrom = widget.querySelector(".custom-from");
+  const customTo = widget.querySelector(".custom-to");
+  const customApply = widget.querySelector(".custom-apply");
+
+  function selectPreset(preset) {
+    buttons.forEach((b) => b.classList.toggle("active", b.dataset.range === preset));
+    if (preset === "custom") {
+      customRow.classList.remove("hidden");
+      return;
+    }
+    customRow.classList.add("hidden");
+    onChange(getDateRangeForPreset(preset));
+  }
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => selectPreset(btn.dataset.range));
+  });
+
+  customApply.addEventListener("click", () => {
+    onChange({ from: customFrom.value || null, to: customTo.value || null });
+  });
+
+  selectPreset("this_month");
+}
+
