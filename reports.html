@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raporlar</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="topnav">
+    <a href="index.html" class="topnav-brand">← Ana Sayfa</a>
+    <div class="topnav-links">
+      <a href="quotes.html">Teklifler</a>
+      <a href="invoices.html">Faturalar</a>
+      <a href="customers.html">Müşteriler</a>
+      <a href="products.html">Ürünler</a>
+      <a href="expenses.html">Giderler</a>
+      <a href="suppliers.html">Tedarikçiler</a>
+      <a href="employees.html">Çalışanlar</a>
+      <a href="accounts.html">Kasa/Banka</a>
+      <a href="reports.html">Raporlar</a>
+    </div>
+    <button id="logout-btn" class="topnav-logout">Çıkış Yap</button>
+  </nav>
+
+  <main class="container-wide">
+    <div class="page-header">
+      <h1>Raporlar</h1>
+    </div>
+
+    <div class="filter-bar" id="report-tabs">
+      <button type="button" class="filter-btn active" data-tab="tahsilatlar">Tahsilatlar</button>
+      <button type="button" class="filter-btn" data-tab="odemeler">Ödemeler</button>
+      <button type="button" class="filter-btn" data-tab="satislar">Satışlar</button>
+      <button type="button" class="filter-btn" data-tab="giderler">Giderler</button>
+      <button type="button" class="filter-btn" data-tab="gelirgider">Gelir-Gider</button>
+      <button type="button" class="filter-btn" data-tab="kdv">KDV</button>
+    </div>
+
+    <!-- ================= TAHSİLATLAR ================= -->
+    <section id="tab-tahsilatlar" class="report-section">
+      <div class="date-range-widget" id="tahsilatlar-date-range">
+        <div class="filter-bar">
+          <button type="button" class="filter-btn" data-range="this_month">Bu Ay</button>
+          <button type="button" class="filter-btn" data-range="last_month">Geçen Ay</button>
+          <button type="button" class="filter-btn" data-range="this_quarter">Bu Çeyrek</button>
+          <button type="button" class="filter-btn" data-range="last_quarter">Geçen Çeyrek</button>
+          <button type="button" class="filter-btn" data-range="this_year">Bu Yıl</button>
+          <button type="button" class="filter-btn" data-range="last_year">Geçen Yıl</button>
+          <button type="button" class="filter-btn" data-range="custom">Özel</button>
+        </div>
+        <div class="custom-date-range hidden">
+          <input type="date" class="custom-from">
+          <span>—</span>
+          <input type="date" class="custom-to">
+          <button type="button" class="secondary custom-apply">Uygula</button>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card stat-card-primary">
+          <span class="stat-label">Seçili Dönemde Toplam Tahsilat</span>
+          <strong class="stat-value" id="tahsilat-period-total">0.00</strong>
+        </div>
+      </div>
+
+      <p class="report-subtitle">Güncel Bekleyen Bakiye (bugün itibarıyla, vade durumuna göre)</p>
+      <table class="report-table">
+        <thead>
+          <tr><th>Durum</th><th class="numeric">Adet</th><th class="numeric">Tutar</th></tr>
+        </thead>
+        <tbody id="tahsilat-aging-body"></tbody>
+      </table>
+    </section>
+
+    <!-- ================= ÖDEMELER ================= -->
+    <section id="tab-odemeler" class="report-section hidden">
+      <div class="date-range-widget" id="odemeler-date-range">
+        <div class="filter-bar">
+          <button type="button" class="filter-btn" data-range="this_month">Bu Ay</button>
+          <button type="button" class="filter-btn" data-range="last_month">Geçen Ay</button>
+          <button type="button" class="filter-btn" data-range="this_quarter">Bu Çeyrek</button>
+          <button type="button" class="filter-btn" data-range="last_quarter">Geçen Çeyrek</button>
+          <button type="button" class="filter-btn" data-range="this_year">Bu Yıl</button>
+          <button type="button" class="filter-btn" data-range="last_year">Geçen Yıl</button>
+          <button type="button" class="filter-btn" data-range="custom">Özel</button>
+        </div>
+        <div class="custom-date-range hidden">
+          <input type="date" class="custom-from">
+          <span>—</span>
+          <input type="date" class="custom-to">
+          <button type="button" class="secondary custom-apply">Uygula</button>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card stat-card-primary">
+          <span class="stat-label">Seçili Dönemde Toplam Ödeme</span>
+          <strong class="stat-value" id="odeme-period-total">0.00</strong>
+        </div>
+      </div>
+
+      <p class="report-subtitle">Güncel Bekleyen Bakiye (bugün itibarıyla, vade durumuna göre)</p>
+      <table class="report-table">
+        <thead>
+          <tr><th>Durum</th><th class="numeric">Adet</th><th class="numeric">Tutar</th></tr>
+        </thead>
+        <tbody id="odeme-aging-body"></tbody>
+      </table>
+    </section>
+
+    <!-- ================= SATIŞLAR ================= -->
+    <section id="tab-satislar" class="report-section hidden">
+      <div class="date-range-widget" id="satislar-date-range">
+        <div class="filter-bar">
+          <button type="button" class="filter-btn" data-range="this_month">Bu Ay</button>
+          <button type="button" class="filter-btn" data-range="last_month">Geçen Ay</button>
+          <button type="button" class="filter-btn" data-range="this_quarter">Bu Çeyrek</button>
+          <button type="button" class="filter-btn" data-range="last_quarter">Geçen Çeyrek</button>
+          <button type="button" class="filter-btn" data-range="this_year">Bu Yıl</button>
+          <button type="button" class="filter-btn" data-range="last_year">Geçen Yıl</button>
+          <button type="button" class="filter-btn" data-range="custom">Özel</button>
+        </div>
+        <div class="custom-date-range hidden">
+          <input type="date" class="custom-from">
+          <span>—</span>
+          <input type="date" class="custom-to">
+          <button type="button" class="secondary custom-apply">Uygula</button>
+        </div>
+      </div>
+
+      <label class="inline-toggle">
+        <input type="checkbox" id="satislar-kdv-haric"> KDV Hariç Göster
+      </label>
+
+      <div class="filter-bar" id="satislar-view-tabs">
+        <button type="button" class="filter-btn active" data-view="faturalar">Faturalar</button>
+        <button type="button" class="filter-btn" data-view="musteriler">Müşteriler</button>
+        <button type="button" class="filter-btn" data-view="urunler">Hizmet/Ürünler</button>
+      </div>
+
+      <table class="report-table">
+        <thead id="satislar-thead"></thead>
+        <tbody id="satislar-tbody"></tbody>
+      </table>
+    </section>
+
+    <!-- ================= GİDERLER ================= -->
+    <section id="tab-giderler" class="report-section hidden">
+      <div class="date-range-widget" id="giderler-date-range">
+        <div class="filter-bar">
+          <button type="button" class="filter-btn" data-range="this_month">Bu Ay</button>
+          <button type="button" class="filter-btn" data-range="last_month">Geçen Ay</button>
+          <button type="button" class="filter-btn" data-range="this_quarter">Bu Çeyrek</button>
+          <button type="button" class="filter-btn" data-range="last_quarter">Geçen Çeyrek</button>
+          <button type="button" class="filter-btn" data-range="this_year">Bu Yıl</button>
+          <button type="button" class="filter-btn" data-range="last_year">Geçen Yıl</button>
+          <button type="button" class="filter-btn" data-range="custom">Özel</button>
+        </div>
+        <div class="custom-date-range hidden">
+          <input type="date" class="custom-from">
+          <span>—</span>
+          <input type="date" class="custom-to">
+          <button type="button" class="secondary custom-apply">Uygula</button>
+        </div>
+      </div>
+
+      <label class="inline-toggle">
+        <input type="checkbox" id="giderler-kdv-haric"> KDV Hariç Göster
+      </label>
+
+      <div class="filter-bar" id="giderler-view-tabs">
+        <button type="button" class="filter-btn active" data-view="giderler">Giderler</button>
+        <button type="button" class="filter-btn" data-view="tedarikciler">Tedarikçiler</button>
+        <button type="button" class="filter-btn" data-view="urunler">Hizmet/Ürünler</button>
+      </div>
+
+      <table class="report-table">
+        <thead id="giderler-thead"></thead>
+        <tbody id="giderler-tbody"></tbody>
+      </table>
+    </section>
+
+    <!-- ================= GELİR-GİDER ================= -->
+    <section id="tab-gelirgider" class="report-section hidden">
+      <div class="date-range-widget" id="gelirgider-date-range">
+        <div class="filter-bar">
+          <button type="button" class="filter-btn" data-range="this_month">Bu Ay</button>
+          <button type="button" class="filter-btn" data-range="last_month">Geçen Ay</button>
+          <button type="button" class="filter-btn" data-range="this_quarter">Bu Çeyrek</button>
+          <button type="button" class="filter-btn" data-range="last_quarter">Geçen Çeyrek</button>
+          <button type="button" class="filter-btn" data-range="this_year">Bu Yıl</button>
+          <button type="button" class="filter-btn" data-range="last_year">Geçen Yıl</button>
+          <button type="button" class="filter-btn" data-range="custom">Özel</button>
+        </div>
+        <div class="custom-date-range hidden">
+          <input type="date" class="custom-from">
+          <span>—</span>
+          <input type="date" class="custom-to">
+          <button type="button" class="secondary custom-apply">Uygula</button>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Toplam Gelir</span>
+          <strong class="stat-value" id="gg-income">0.00</strong>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Toplam Gider</span>
+          <strong class="stat-value" id="gg-expense">0.00</strong>
+        </div>
+        <div class="stat-card stat-card-primary" id="gg-net-card">
+          <span class="stat-label">Net</span>
+          <strong class="stat-value" id="gg-net">0.00</strong>
+        </div>
+      </div>
+
+      <p class="report-subtitle">Aylık Dağılım</p>
+      <table class="report-table">
+        <thead>
+          <tr><th>Ay</th><th class="numeric">Gelir</th><th class="numeric">Gider</th><th class="numeric">Net</th></tr>
+        </thead>
+        <tbody id="gg-monthly-body"></tbody>
+      </table>
+    </section>
+
+    <!-- ================= KDV ================= -->
+    <section id="tab-kdv" class="report-section hidden">
+      <label style="max-width:160px;">Yıl
+        <select id="kdv-year"></select>
+      </label>
+
+      <table class="report-table">
+        <thead>
+          <tr><th>Ay</th><th class="numeric">Hesaplanan KDV</th><th class="numeric">İndirilecek KDV</th><th class="numeric">Net KDV</th></tr>
+        </thead>
+        <tbody id="kdv-body"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    window.supabase = { createClient };
+  </script>
+  <script src="shared.js" defer></script>
+  <script src="reports.js" defer></script>
+</body>
+</html>
