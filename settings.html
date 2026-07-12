@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ayarlar</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="topnav">
+    <a href="index.html" class="topnav-brand">← Ana Sayfa</a>
+    <div class="topnav-links">
+      <a href="quotes.html">Teklifler</a>
+      <a href="invoices.html">Faturalar</a>
+      <a href="customers.html">Müşteriler</a>
+      <a href="products.html">Ürünler</a>
+      <a href="expenses.html">Giderler</a>
+      <a href="suppliers.html">Tedarikçiler</a>
+      <a href="employees.html">Çalışanlar</a>
+      <a href="accounts.html">Kasa/Banka</a>
+      <a href="reports.html">Raporlar</a>
+      <a href="settings.html">Ayarlar</a>
+    </div>
+    <button id="logout-btn" class="topnav-logout">Çıkış Yap</button>
+  </nav>
+
+  <main class="container">
+    <div class="page-header">
+      <h1>Ayarlar — Firma Bilgileri</h1>
+    </div>
+
+    <form id="settings-form" class="customer-form">
+      <fieldset>
+        <legend>Genel Bilgiler</legend>
+        <label>Firma Adı *
+          <input type="text" id="name" required>
+        </label>
+        <label>Ticari Unvan
+          <input type="text" id="ticari_unvan">
+        </label>
+        <label>Sektör
+          <input type="text" id="sektor">
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Adres</legend>
+        <label>Adres
+          <textarea id="adres"></textarea>
+        </label>
+        <label>İlçe
+          <input type="text" id="ilce">
+        </label>
+        <label>İl
+          <input type="text" id="il">
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>İletişim</legend>
+        <label>Telefon
+          <input type="text" id="telefon">
+        </label>
+        <label>Faks
+          <input type="text" id="faks">
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Resmi Bilgiler</legend>
+        <label>Vergi Dairesi
+          <input type="text" id="vergi_dairesi">
+        </label>
+        <label>Vergi No
+          <input type="text" id="vergi_no">
+        </label>
+        <label>Mersis No
+          <input type="text" id="mersis_no">
+        </label>
+        <label>Ticaret Sicil No
+          <input type="text" id="ticaret_sicil_no">
+        </label>
+      </fieldset>
+
+      <p id="settings-error" class="error"></p>
+      <p id="settings-success" class="success"></p>
+
+      <button type="submit">Kaydet</button>
+    </form>
+  </main>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    window.supabase = { createClient };
+  </script>
+  <script src="shared.js" defer></script>
+  <script src="settings.js" defer></script>
+</body>
+</html>
