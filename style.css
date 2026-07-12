@@ -449,3 +449,4 @@ button.secondary { background: transparent; border: 1px solid var(--border); col
   font-size: 15px;
 }
 .totals-grand strong { color: var(--accent); }
+.success { color: var(--ok); font-size: 12px; min-height: 16px; margin: 10px 0 0; }
