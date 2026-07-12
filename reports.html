@@ -132,6 +132,9 @@
       <label class="inline-toggle">
         <input type="checkbox" id="satislar-kdv-haric"> KDV Hariç Göster
       </label>
+      <label class="inline-toggle" id="satislar-unpaid-only-wrap">
+        <input type="checkbox" id="satislar-unpaid-only"> Sadece Tahsil Edilmemiş Göster
+      </label>
 
       <div class="filter-bar" id="satislar-view-tabs">
         <button type="button" class="filter-btn active" data-view="faturalar">Faturalar</button>
@@ -168,6 +171,9 @@
       <label class="inline-toggle">
         <input type="checkbox" id="giderler-kdv-haric"> KDV Hariç Göster
       </label>
+      <label class="inline-toggle" id="giderler-unpaid-only-wrap">
+        <input type="checkbox" id="giderler-unpaid-only"> Sadece Ödenmemiş Göster
+      </label>
 
       <div class="filter-bar" id="giderler-view-tabs">
         <button type="button" class="filter-btn active" data-view="giderler">Giderler</button>
@@ -199,6 +205,11 @@
           <input type="date" class="custom-to">
           <button type="button" class="secondary custom-apply">Uygula</button>
         </div>
+      </div>
+
+      <div class="filter-bar" id="gg-basis-tabs">
+        <button type="button" class="filter-btn active" data-basis="accrual">Tahakkuk Bazlı (Fatura/Fiş Tarihi)</button>
+        <button type="button" class="filter-btn" data-basis="cash">Nakit Bazlı (Tahsilat/Ödeme Tarihi)</button>
       </div>
 
       <div class="stats-grid">
