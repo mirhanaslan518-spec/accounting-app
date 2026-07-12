@@ -121,7 +121,6 @@ async function loadTahsilatlarReport(range) {
   const periodTotal = (periodData || []).reduce((s, x) => s + (Number(x.grand_total) || 0), 0);
   document.getElementById("tahsilat-period-total").textContent = periodTotal.toFixed(2);
 
-  // Aging is always "as of today" — not affected by the date-range filter above.
   const { data: outstanding } = await sb
     .from("invoices")
     .select("grand_total, due_date")
@@ -174,35 +173,44 @@ function initSatislarTab() {
       document.querySelectorAll("#satislar-view-tabs .filter-btn").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       satislarView = btn.dataset.view;
+      document.getElementById("satislar-unpaid-only-wrap").classList.toggle("hidden", satislarView !== "faturalar");
       loadSatislarReport();
     });
   });
 
   document.getElementById("satislar-kdv-haric").addEventListener("change", loadSatislarReport);
+  document.getElementById("satislar-unpaid-only").addEventListener("change", loadSatislarReport);
 }
 
 async function loadSatislarReport() {
   const kdvHaric = document.getElementById("satislar-kdv-haric").checked;
+  const unpaidOnly = document.getElementById("satislar-unpaid-only").checked;
   const thead = document.getElementById("satislar-thead");
   const tbody = document.getElementById("satislar-tbody");
 
   if (satislarView === "faturalar") {
     let q = sb.from("invoices")
-      .select("invoice_name, invoice_number, issue_date, subtotal, grand_total, currency, customers(company_title)")
+      .select("invoice_name, invoice_number, issue_date, subtotal, grand_total, currency, collection_status, due_date, customers(company_title)")
       .eq("company_id", currentCompanyId);
     if (satislarRange.from) q = q.gte("issue_date", satislarRange.from);
     if (satislarRange.to) q = q.lte("issue_date", satislarRange.to);
-    const { data } = await q.order("issue_date", { ascending: false });
+    let { data } = await q.order("issue_date", { ascending: false });
 
-    thead.innerHTML = `<tr><th>Fatura</th><th>Müşteri</th><th>Tarih</th><th class="numeric">Tutar</th></tr>`;
+    if (unpaidOnly) {
+      data = (data || []).filter((inv) => inv.collection_status !== "tahsil_edildi");
+    }
+
+    thead.innerHTML = `<tr><th>Fatura</th><th>Müşteri</th><th>Tarih</th><th>Durum</th><th class="numeric">Tutar</th></tr>`;
     tbody.innerHTML = "";
     (data || []).forEach((inv) => {
       const amount = kdvHaric ? Number(inv.subtotal) : Number(inv.grand_total);
+      const status = categorizeInvoice(inv);
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${escapeHtml(inv.invoice_name || inv.invoice_number || "Fatura")}</td>
         <td>${escapeHtml(inv.customers ? inv.customers.company_title : "")}</td>
         <td>${inv.issue_date || ""}</td>
+        <td><span class="status-badge ${status.cls}">${status.label}</span></td>
         <td class="numeric">${amount.toFixed(2)} ${inv.currency}</td>
       `;
       tbody.appendChild(tr);
@@ -256,7 +264,7 @@ async function loadSatislarReport() {
   }
 
   if (tbody.children.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="empty-state">Seçili aralıkta veri yok.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">Seçili aralıkta veri yok.</td></tr>`;
   }
 }
 
@@ -275,36 +283,45 @@ function initGiderlerTab() {
       document.querySelectorAll("#giderler-view-tabs .filter-btn").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       giderlerView = btn.dataset.view;
+      document.getElementById("giderler-unpaid-only-wrap").classList.toggle("hidden", giderlerView !== "giderler");
       loadGiderlerReport();
     });
   });
 
   document.getElementById("giderler-kdv-haric").addEventListener("change", loadGiderlerReport);
+  document.getElementById("giderler-unpaid-only").addEventListener("change", loadGiderlerReport);
 }
 
 async function loadGiderlerReport() {
   const kdvHaric = document.getElementById("giderler-kdv-haric").checked;
+  const unpaidOnly = document.getElementById("giderler-unpaid-only").checked;
   const thead = document.getElementById("giderler-thead");
   const tbody = document.getElementById("giderler-tbody");
 
   if (giderlerView === "giderler") {
     let q = sb.from("expenses")
-      .select("expense_name, receipt_date, total_amount, tax_total, currency, suppliers(company_title)")
+      .select("expense_name, receipt_date, total_amount, tax_total, currency, payment_status, due_date, suppliers(company_title)")
       .eq("company_id", currentCompanyId);
     if (giderlerRange.from) q = q.gte("receipt_date", giderlerRange.from);
     if (giderlerRange.to) q = q.lte("receipt_date", giderlerRange.to);
-    const { data } = await q.order("receipt_date", { ascending: false });
+    let { data } = await q.order("receipt_date", { ascending: false });
 
-    thead.innerHTML = `<tr><th>Gider</th><th>Tedarikçi</th><th>Tarih</th><th class="numeric">Tutar</th></tr>`;
+    if (unpaidOnly) {
+      data = (data || []).filter((x) => x.payment_status === "odenecek");
+    }
+
+    thead.innerHTML = `<tr><th>Gider</th><th>Tedarikçi</th><th>Tarih</th><th>Durum</th><th class="numeric">Tutar</th></tr>`;
     tbody.innerHTML = "";
     (data || []).forEach((x) => {
       const net = Number(x.total_amount) - Number(x.tax_total);
       const amount = kdvHaric ? net : Number(x.total_amount);
+      const status = categorizeExpense(x);
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${escapeHtml(x.expense_name || "Gider")}</td>
         <td>${escapeHtml(x.suppliers ? x.suppliers.company_title : "")}</td>
         <td>${x.receipt_date || ""}</td>
+        <td><span class="status-badge ${status.cls}">${status.label}</span></td>
         <td class="numeric">${amount.toFixed(2)} ${x.currency}</td>
       `;
       tbody.appendChild(tr);
@@ -359,30 +376,63 @@ async function loadGiderlerReport() {
   }
 
   if (tbody.children.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="empty-state">Seçili aralıkta veri yok.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">Seçili aralıkta veri yok.</td></tr>`;
   }
 }
 
 // ================= GELİR-GİDER =================
 let gelirGiderRange = { from: null, to: null };
+let gelirGiderBasis = "accrual"; // "accrual" = fatura/fiş tarihi, "cash" = tahsilat/ödeme tarihi
 
 function initGelirGiderTab() {
   initDateRangeFilter("gelirgider-date-range", (range) => {
     gelirGiderRange = range;
     loadGelirGiderReport();
   });
+
+  document.querySelectorAll("#gg-basis-tabs .filter-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#gg-basis-tabs .filter-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      gelirGiderBasis = btn.dataset.basis;
+      loadGelirGiderReport();
+    });
+  });
 }
 
 async function loadGelirGiderReport() {
-  let invQ = sb.from("invoices").select("grand_total, issue_date").eq("company_id", currentCompanyId);
-  if (gelirGiderRange.from) invQ = invQ.gte("issue_date", gelirGiderRange.from);
-  if (gelirGiderRange.to) invQ = invQ.lte("issue_date", gelirGiderRange.to);
-  const { data: invoices } = await invQ;
+  let invoices, expenses;
+  const incomeDateField = gelirGiderBasis === "cash" ? "collected_date" : "issue_date";
+  const expenseDateField = gelirGiderBasis === "cash" ? "paid_date" : "receipt_date";
 
-  let expQ = sb.from("expenses").select("total_amount, receipt_date").eq("company_id", currentCompanyId);
-  if (gelirGiderRange.from) expQ = expQ.gte("receipt_date", gelirGiderRange.from);
-  if (gelirGiderRange.to) expQ = expQ.lte("receipt_date", gelirGiderRange.to);
-  const { data: expenses } = await expQ;
+  if (gelirGiderBasis === "cash") {
+    let invQ = sb.from("invoices")
+      .select(`grand_total, ${incomeDateField}`)
+      .eq("company_id", currentCompanyId)
+      .eq("collection_status", "tahsil_edildi");
+    if (gelirGiderRange.from) invQ = invQ.gte(incomeDateField, gelirGiderRange.from);
+    if (gelirGiderRange.to) invQ = invQ.lte(incomeDateField, gelirGiderRange.to);
+    ({ data: invoices } = await invQ);
+
+    let expQ = sb.from("expenses")
+      .select(`total_amount, ${expenseDateField}`)
+      .eq("company_id", currentCompanyId)
+      .in("payment_status", ["odendi", "calisan_cebinden_odedi"]);
+    if (gelirGiderRange.from) expQ = expQ.gte(expenseDateField, gelirGiderRange.from);
+    if (gelirGiderRange.to) expQ = expQ.lte(expenseDateField, gelirGiderRange.to);
+    ({ data: expenses } = await expQ);
+
+  } else {
+    let invQ = sb.from("invoices").select(`grand_total, ${incomeDateField}`).eq("company_id", currentCompanyId);
+    if (gelirGiderRange.from) invQ = invQ.gte(incomeDateField, gelirGiderRange.from);
+    if (gelirGiderRange.to) invQ = invQ.lte(incomeDateField, gelirGiderRange.to);
+    ({ data: invoices } = await invQ);
+
+    let expQ = sb.from("expenses").select(`total_amount, ${expenseDateField}`).eq("company_id", currentCompanyId);
+    if (gelirGiderRange.from) expQ = expQ.gte(expenseDateField, gelirGiderRange.from);
+    if (gelirGiderRange.to) expQ = expQ.lte(expenseDateField, gelirGiderRange.to);
+    ({ data: expenses } = await expQ);
+  }
 
   const totalIncome = (invoices || []).reduce((s, x) => s + (Number(x.grand_total) || 0), 0);
   const totalExpense = (expenses || []).reduce((s, x) => s + (Number(x.total_amount) || 0), 0);
@@ -398,13 +448,13 @@ async function loadGelirGiderReport() {
 
   const months = {};
   (invoices || []).forEach((x) => {
-    const key = (x.issue_date || "").slice(0, 7);
+    const key = (x[incomeDateField] || "").slice(0, 7);
     if (!key) return;
     if (!months[key]) months[key] = { income: 0, expense: 0 };
     months[key].income += Number(x.grand_total) || 0;
   });
   (expenses || []).forEach((x) => {
-    const key = (x.receipt_date || "").slice(0, 7);
+    const key = (x[expenseDateField] || "").slice(0, 7);
     if (!key) return;
     if (!months[key]) months[key] = { income: 0, expense: 0 };
     months[key].expense += Number(x.total_amount) || 0;
