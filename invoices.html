@@ -125,9 +125,14 @@
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    import { jsPDF } from 'https://cdn.jsdelivr.net/npm/jspdf@2/+esm';
+    import { autoTable } from 'https://cdn.jsdelivr.net/npm/jspdf-autotable@5/+esm';
     window.supabase = { createClient };
+    window.jsPDF = jsPDF;
+    window.pdfAutoTable = autoTable;
   </script>
   <script src="shared.js" defer></script>
+  <script src="pdf.js" defer></script>
   <script src="invoices.js" defer></script>
 </body>
 </html>
