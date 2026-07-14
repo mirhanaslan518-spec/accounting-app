@@ -1,16 +1,16 @@
 // =========================================================
 // invoices.js — logic for invoices.html
-// Relies on shared.js being loaded first (sb, requireSession,
-// getMyCompany, categorizeInvoice).
+// Relies on shared.js (sb, requireSession, getMyCompany,
+// categorizeInvoice) and pdf.js (buildDocumentPDF, openPDF).
 // =========================================================
 
 let currentCompanyId = null;
 let allInvoices = [];
 let allProducts = [];
 let allAccounts = [];
-let editingId = null; // null = new invoice, otherwise = id being edited
-let editingCollectionStatus = "tahsil_edilecek"; // preserved as-is when editing an invoice
-let pendingCollectId = null; // which invoice the collect-modal is currently acting on
+let editingId = null;
+let editingCollectionStatus = "tahsil_edilecek";
+let pendingCollectId = null;
 
 const listEl = document.getElementById("invoice-list");
 const newBtn = document.getElementById("new-invoice-btn");
@@ -46,7 +46,6 @@ async function init() {
   await loadInvoices();
 }
 
-// ---- CUSTOMER DROPDOWN ------------------------------------------------------
 async function loadCustomerOptions() {
   const { data } = await sb
     .from("customers")
@@ -64,7 +63,6 @@ async function loadCustomerOptions() {
   });
 }
 
-// ---- PRODUCT CATALOG (for the line-item autocomplete) ------------------------
 async function loadProductOptions() {
   const { data } = await sb
     .from("products")
@@ -83,7 +81,6 @@ async function loadProductOptions() {
   });
 }
 
-// ---- ACCOUNTS (for the collection modal) --------------------------------------
 async function loadAccounts() {
   const { data } = await sb
     .from("accounts")
@@ -105,7 +102,6 @@ function populateAccountSelect() {
   });
 }
 
-// ---- LOAD + RENDER THE INVOICE LIST -----------------------------------------
 async function loadInvoices() {
   listEl.innerHTML = `<p class="empty-state">Yükleniyor...</p>`;
 
@@ -150,6 +146,7 @@ function renderInvoiceList(invoices) {
       </div>
       <div class="customer-card-actions">
         <strong class="invoice-total">${Number(inv.grand_total).toFixed(2)} ${inv.currency}</strong>
+        <button class="pdf-btn" data-id="${inv.id}">PDF</button>
         <button class="toggle-btn" data-id="${inv.id}" data-status="${inv.collection_status}">${toggleLabel}</button>
         <button class="edit-btn" data-id="${inv.id}">Düzenle</button>
         <button class="delete-btn" data-id="${inv.id}">Sil</button>
@@ -167,6 +164,9 @@ function renderInvoiceList(invoices) {
   document.querySelectorAll(".toggle-btn").forEach((btn) => {
     btn.addEventListener("click", () => toggleCollectionStatus(btn.dataset.id, btn.dataset.status));
   });
+  document.querySelectorAll(".pdf-btn").forEach((btn) => {
+    btn.addEventListener("click", () => generateInvoicePDF(btn.dataset.id));
+  });
 }
 
 function escapeHtml(str) {
@@ -175,10 +175,39 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// ---- COLLECTION STATUS: the only place this ever changes ---------------------
+// ---- PDF GENERATION ---------------------------------------------------------
+async function generateInvoicePDF(id) {
+  const inv = allInvoices.find((x) => x.id === id);
+  if (!inv) return;
+
+  const { data: company } = await sb.from("companies").select("*").eq("id", currentCompanyId).single();
+  const { data: customer } = await sb.from("customers").select("*").eq("id", inv.customer_id).single();
+  const { data: lines } = await sb.from("invoice_lines").select("*").eq("invoice_id", id);
+
+  try {
+    const doc = await buildDocumentPDF({
+      docType: "FATURA",
+      docNumber: inv.invoice_number,
+      issueDate: inv.issue_date,
+      dueDate: inv.due_date,
+      currency: inv.currency,
+      company: company || {},
+      customer: customer || {},
+      lines: lines || [],
+      subtotal: inv.subtotal,
+      taxTotal: inv.tax_total,
+      grandTotal: inv.grand_total,
+      notes: inv.notes,
+    });
+    openPDF(doc);
+  } catch (err) {
+    alert(`PDF oluşturulamadı: ${err.message}`);
+  }
+}
+
+// ---- COLLECTION STATUS ---------------------------------------------------------
 async function toggleCollectionStatus(id, currentStatus) {
   if (currentStatus === "tahsil_edildi") {
-    // Undo is simple: flip back and clear the collection details.
     const { error } = await sb.from("invoices").update({
       collection_status: "tahsil_edilecek",
       collected_date: null,
@@ -193,7 +222,6 @@ async function toggleCollectionStatus(id, currentStatus) {
     return;
   }
 
-  // Marking as collected requires knowing which account received it.
   if (allAccounts.length === 0) {
     alert("Önce en az bir Kasa/Banka hesabı oluşturmalısınız (Kasa/Banka sayfası).");
     return;
@@ -339,7 +367,7 @@ addLineBtn.addEventListener("click", () => {
 // ---- FORM: OPEN / CLOSE -------------------------------------------------------
 function openForNew() {
   editingId = null;
-  editingCollectionStatus = "tahsil_edilecek"; // every new invoice starts uncollected
+  editingCollectionStatus = "tahsil_edilecek";
   formTitle.textContent = "Yeni Fatura";
   formError.textContent = "";
   form.reset();
@@ -357,7 +385,7 @@ async function openForEdit(id) {
   if (!inv) return;
 
   editingId = id;
-  editingCollectionStatus = inv.collection_status; // preserved untouched by this form
+  editingCollectionStatus = inv.collection_status;
   formTitle.textContent = "Faturayı Düzenle";
   formError.textContent = "";
 
@@ -386,7 +414,6 @@ function closeForm() {
   overlay.classList.add("hidden");
 }
 
-// ---- DUE DATE PRESETS -----------------------------------------------------------
 document.querySelectorAll(".preset-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
     const days = parseInt(btn.dataset.days, 10);
@@ -398,7 +425,6 @@ document.querySelectorAll(".preset-btn").forEach((btn) => {
   });
 });
 
-// ---- DELETE -----------------------------------------------------------------------
 async function deleteInvoice(id) {
   const inv = allInvoices.find((x) => x.id === id);
   const label = inv ? (inv.invoice_name || inv.invoice_number || "bu fatura") : "bu fatura";
@@ -413,7 +439,6 @@ async function deleteInvoice(id) {
   await loadInvoices();
 }
 
-// ---- SAVE (CALLS THE POSTGRES FUNCTIONS FROM sprint2_invoice_functions.sql) --------
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   formError.textContent = "";
@@ -446,7 +471,7 @@ form.addEventListener("submit", async (e) => {
       p_invoice_number: invoiceNumber,
       p_issue_date: issueDate,
       p_due_date: dueDate,
-      p_collection_status: editingCollectionStatus, // untouched by this form
+      p_collection_status: editingCollectionStatus,
       p_currency: currency,
       p_notes: notes,
       p_lines: lines,
@@ -459,7 +484,7 @@ form.addEventListener("submit", async (e) => {
       p_invoice_number: invoiceNumber,
       p_issue_date: issueDate,
       p_due_date: dueDate,
-      p_collection_status: "tahsil_edilecek", // new invoices always start uncollected
+      p_collection_status: "tahsil_edilecek",
       p_currency: currency,
       p_notes: notes,
       p_lines: lines,
@@ -475,7 +500,6 @@ form.addEventListener("submit", async (e) => {
   await loadInvoices();
 });
 
-// ---- BUTTONS ------------------------------------------------------------------------
 newBtn.addEventListener("click", openForNew);
 cancelBtn.addEventListener("click", closeForm);
 
@@ -484,5 +508,4 @@ logoutBtn.addEventListener("click", async () => {
   window.location.href = "index.html";
 });
 
-// ---- START ----------------------------------------------------------------------------
 init();
