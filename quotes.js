@@ -1,14 +1,14 @@
 // =========================================================
 // quotes.js — logic for quotes.html
-// Relies on shared.js being loaded first (sb, requireSession,
-// getMyCompany).
+// Relies on shared.js (sb, requireSession, getMyCompany) and
+// pdf.js (buildDocumentPDF, openPDF).
 // =========================================================
 
 let currentCompanyId = null;
 let allQuotes = [];
 let allProducts = [];
-let editingId = null;       // null = new quote, otherwise = id being edited
-let editingStatus = "beklemede"; // preserved as-is when editing a quote's details
+let editingId = null;
+let editingStatus = "beklemede";
 let currentFilter = "all";
 
 const listEl = document.getElementById("quote-list");
@@ -22,7 +22,6 @@ const logoutBtn = document.getElementById("logout-btn");
 const lineItemsEl = document.getElementById("line-items");
 const addLineBtn = document.getElementById("add-line-btn");
 
-// ---- STARTUP --------------------------------------------------------------
 async function init() {
   const session = await requireSession();
   if (!session) return;
@@ -39,7 +38,6 @@ async function init() {
   await loadQuotes();
 }
 
-// ---- CUSTOMER DROPDOWN ------------------------------------------------------
 async function loadCustomerOptions() {
   const { data } = await sb
     .from("customers")
@@ -57,7 +55,6 @@ async function loadCustomerOptions() {
   });
 }
 
-// ---- PRODUCT CATALOG (for the line-item autocomplete) ------------------------
 async function loadProductOptions() {
   const { data } = await sb
     .from("products")
@@ -76,7 +73,6 @@ async function loadProductOptions() {
   });
 }
 
-// ---- LOAD + RENDER THE QUOTE LIST -----------------------------------------
 async function loadQuotes() {
   listEl.innerHTML = `<p class="empty-state">Yükleniyor...</p>`;
 
@@ -129,9 +125,6 @@ function renderList() {
       actionButtons = `<button class="toggle-btn" data-id="${q.id}" data-action="beklemede">Beklemede Yap</button>`;
     }
 
-    // Conversion is permanent, regardless of what the quote's status gets
-    // changed to afterward — so this note shows no matter which status
-    // branch above fired, instead of only inside the "kabul_edildi" one.
     if (q.converted_invoice_id) {
       actionButtons += `<span class="converted-note">Faturalandırıldı</span>`;
     }
@@ -146,6 +139,7 @@ function renderList() {
       </div>
       <div class="customer-card-actions">
         <strong class="invoice-total">${Number(q.grand_total).toFixed(2)} ${q.currency}</strong>
+        <button class="pdf-btn" data-id="${q.id}">PDF</button>
         ${actionButtons}
         <button class="edit-btn" data-id="${q.id}">Düzenle</button>
         <button class="delete-btn" data-id="${q.id}">Sil</button>
@@ -169,6 +163,9 @@ function renderList() {
   document.querySelectorAll(".convert-btn").forEach((btn) => {
     btn.addEventListener("click", () => convertToInvoice(btn.dataset.id));
   });
+  document.querySelectorAll(".pdf-btn").forEach((btn) => {
+    btn.addEventListener("click", () => generateQuotePDF(btn.dataset.id));
+  });
 }
 
 function escapeHtml(str) {
@@ -177,7 +174,37 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// ---- FILTER BAR (wired once — the buttons themselves don't change) -----------
+// ---- PDF GENERATION ---------------------------------------------------------
+async function generateQuotePDF(id) {
+  const q = allQuotes.find((x) => x.id === id);
+  if (!q) return;
+
+  const { data: company } = await sb.from("companies").select("*").eq("id", currentCompanyId).single();
+  const { data: customer } = await sb.from("customers").select("*").eq("id", q.customer_id).single();
+  const { data: lines } = await sb.from("quote_lines").select("*").eq("quote_id", id);
+
+  try {
+    const doc = await buildDocumentPDF({
+      docType: "TEKLİF",
+      docNumber: null,
+      issueDate: q.issue_date,
+      dueDate: q.valid_until,
+      currency: q.currency,
+      company: company || {},
+      customer: customer || {},
+      lines: lines || [],
+      subtotal: q.subtotal,
+      taxTotal: q.tax_total,
+      grandTotal: q.grand_total,
+      notes: q.notes,
+      terms: q.terms,
+    });
+    openPDF(doc);
+  } catch (err) {
+    alert(`PDF oluşturulamadı: ${err.message}`);
+  }
+}
+
 document.querySelectorAll(".filter-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
@@ -187,7 +214,6 @@ document.querySelectorAll(".filter-btn").forEach((btn) => {
   });
 });
 
-// ---- STATUS ACTIONS ---------------------------------------------------------
 async function updateQuoteStatus(id, newStatus) {
   const { error } = await sb.from("quotes").update({ status: newStatus }).eq("id", id);
   if (error) {
@@ -224,7 +250,6 @@ async function deleteQuote(id) {
   await loadQuotes();
 }
 
-// ---- LINE ITEM ROWS (same pattern as invoices.js) -----------------------------
 function makeInput(className, type, value, placeholder, step) {
   const input = document.createElement("input");
   input.className = className;
@@ -321,7 +346,6 @@ addLineBtn.addEventListener("click", () => {
   recalcTotals();
 });
 
-// ---- FORM: OPEN / CLOSE -------------------------------------------------------
 function openForNew() {
   editingId = null;
   editingStatus = "beklemede";
@@ -371,7 +395,6 @@ function closeForm() {
   overlay.classList.add("hidden");
 }
 
-// ---- VALIDITY DATE PRESETS -----------------------------------------------------
 document.querySelectorAll(".preset-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
     const days = parseInt(btn.dataset.days, 10);
@@ -383,7 +406,6 @@ document.querySelectorAll(".preset-btn").forEach((btn) => {
   });
 });
 
-// ---- SAVE (CALLS THE POSTGRES FUNCTIONS FROM sprint5_quotes.sql) --------------
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   formError.textContent = "";
@@ -416,7 +438,7 @@ form.addEventListener("submit", async (e) => {
       p_issue_date: issueDate,
       p_valid_until: validUntil,
       p_currency: currency,
-      p_status: editingStatus, // untouched by this form
+      p_status: editingStatus,
       p_terms: terms,
       p_notes: notes,
       p_lines: lines,
@@ -444,7 +466,6 @@ form.addEventListener("submit", async (e) => {
   await loadQuotes();
 });
 
-// ---- BUTTONS ------------------------------------------------------------------------
 newBtn.addEventListener("click", openForNew);
 cancelBtn.addEventListener("click", closeForm);
 
@@ -453,5 +474,4 @@ logoutBtn.addEventListener("click", async () => {
   window.location.href = "index.html";
 });
 
-// ---- START ----------------------------------------------------------------------------
 init();
