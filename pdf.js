@@ -8,7 +8,7 @@
 // would render as broken boxes without this. We fetch a real Unicode font
 // once per page session and embed it into each PDF instead of pasting a
 // giant base64 blob into this file.
-const TURKISH_FONT_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf";
+const TURKISH_FONT_URL = "https://github.com/PolymerElements/font-roboto-local/blob/master/fonts/roboto/Roboto-Regular.ttf";
 let fontBase64Cache = null;
 
 function arrayBufferToBase64(buffer) {
