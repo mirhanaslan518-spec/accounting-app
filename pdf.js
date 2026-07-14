@@ -8,7 +8,7 @@
 // would render as broken boxes without this. We fetch a real Unicode font
 // once per page session and embed it into each PDF instead of pasting a
 // giant base64 blob into this file.
-const TURKISH_FONT_URL = "https://cdnjs.cloudflare.com/ajax/libs/roboto-fontface/0.10.0/fonts/roboto/Roboto-Regular.ttf";
+const TURKISH_FONT_URL = "https://cdn.jsdelivr.net/gh/google/fonts@3599dc2b7c6cb3b9a5840d869269d71c1f43396b/apache/roboto/static/Roboto-Regular.ttf";
 let fontBase64Cache = null;
 
 function arrayBufferToBase64(buffer) {
