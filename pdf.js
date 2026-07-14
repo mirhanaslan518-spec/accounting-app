@@ -100,8 +100,8 @@ async function buildDocumentPDF(config) {
     head: [["Açıklama", "Miktar", "Birim", "Br. Fiyat", "KDV", "Toplam"]],
     body,
     theme: "grid",
-    headStyles: { font: "Roboto", fillColor: [232, 163, 61], textColor: [20, 23, 26] },
-    styles: { font: "Roboto", fontSize: 9 },
+    headStyles: { font: "Roboto", fontStyle: "normal", fillColor: [232, 163, 61], textColor: [20, 23, 26] },
+    styles: { font: "Roboto", fontStyle: "normal", fontSize: 9 },
   });
 
   let finalY = doc.lastAutoTable.finalY + 10;
