@@ -36,6 +36,8 @@
       <button type="button" class="filter-btn" data-tab="giderler">Giderler</button>
       <button type="button" class="filter-btn" data-tab="gelirgider">Gelir-Gider</button>
       <button type="button" class="filter-btn" data-tab="kdv">KDV</button>
+      <button type="button" class="filter-btn" data-tab="kasabanka">Kasa/Banka</button>
+      <button type="button" class="filter-btn" data-tab="nakitakisi">Nakit Akışı</button>
     </div>
 
     <!-- ================= TAHSİLATLAR ================= -->
@@ -248,6 +250,93 @@
           <tr><th>Ay</th><th class="numeric">Hesaplanan KDV</th><th class="numeric">İndirilecek KDV</th><th class="numeric">Net KDV</th></tr>
         </thead>
         <tbody id="kdv-body"></tbody>
+      </table>
+    </section>
+
+    <!-- ================= KASA/BANKA ================= -->
+    <section id="tab-kasabanka" class="report-section hidden">
+      <label style="max-width:280px;">Hesap
+        <select id="kb-account-select"></select>
+      </label>
+
+      <div class="date-range-widget" id="kasabanka-date-range">
+        <div class="filter-bar">
+          <button type="button" class="filter-btn" data-range="this_month">Bu Ay</button>
+          <button type="button" class="filter-btn" data-range="last_month">Geçen Ay</button>
+          <button type="button" class="filter-btn" data-range="this_quarter">Bu Çeyrek</button>
+          <button type="button" class="filter-btn" data-range="last_quarter">Geçen Çeyrek</button>
+          <button type="button" class="filter-btn" data-range="this_year">Bu Yıl</button>
+          <button type="button" class="filter-btn" data-range="last_year">Geçen Yıl</button>
+          <button type="button" class="filter-btn" data-range="custom">Özel</button>
+        </div>
+        <div class="custom-date-range hidden">
+          <input type="date" class="custom-from">
+          <span>—</span>
+          <input type="date" class="custom-to">
+          <button type="button" class="secondary custom-apply">Uygula</button>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card stat-card-primary">
+          <span class="stat-label">Güncel Bakiye</span>
+          <strong class="stat-value" id="kb-balance">0.00</strong>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Dönem İçi Giriş</span>
+          <strong class="stat-value" id="kb-period-in">0.00</strong>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Dönem İçi Çıkış</span>
+          <strong class="stat-value" id="kb-period-out">0.00</strong>
+        </div>
+      </div>
+
+      <div id="kb-ledger-section" class="hidden">
+        <p class="report-subtitle">Hesap Ekstresi (seçili dönem)</p>
+        <table class="report-table">
+          <thead>
+            <tr><th>Tarih</th><th>Açıklama</th><th class="numeric">Tutar</th><th class="numeric">Bakiye</th></tr>
+          </thead>
+          <tbody id="kb-ledger-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= NAKİT AKIŞI ================= -->
+    <section id="tab-nakitakisi" class="report-section hidden">
+      <div class="stats-grid">
+        <div class="stat-card stat-card-primary">
+          <span class="stat-label">Toplam Bakiye (tüm hesaplar)</span>
+          <strong class="stat-value" id="na-total-balance">0.00</strong>
+        </div>
+        <div class="stat-card stat-card-fail">
+          <span class="stat-label">Vadesi Geçmiş Tahsilat</span>
+          <strong class="stat-value" id="na-overdue-in">0.00</strong>
+        </div>
+        <div class="stat-card stat-card-fail">
+          <span class="stat-label">Vadesi Geçmiş Ödeme</span>
+          <strong class="stat-value" id="na-overdue-out">0.00</strong>
+        </div>
+        <div class="stat-card stat-card-neutral">
+          <span class="stat-label">Planlanmamış Tahsilat</span>
+          <strong class="stat-value" id="na-unplanned-in">0.00</strong>
+        </div>
+        <div class="stat-card stat-card-neutral">
+          <span class="stat-label">Planlanmamış Ödeme</span>
+          <strong class="stat-value" id="na-unplanned-out">0.00</strong>
+        </div>
+      </div>
+
+      <p class="report-subtitle">Gelecek 12 Hafta — Net Nakit Akışı</p>
+      <div class="cashflow-chart" id="cashflow-chart"></div>
+
+      <p class="report-subtitle">Haftalık Detay</p>
+      <table class="report-table">
+        <thead>
+          <tr><th>Hafta</th><th class="numeric">Net</th><th class="numeric">Projeksiyon Bakiye</th></tr>
+        </thead>
+        <tbody id="na-weekly-body"></tbody>
       </table>
     </section>
   </main>
