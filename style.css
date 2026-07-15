@@ -451,3 +451,12 @@ button.secondary { background: transparent; border: 1px solid var(--border); col
 .totals-grand strong { color: var(--accent); }
 .success { color: var(--ok); font-size: 12px; min-height: 16px; margin: 10px 0 0; }
 .pdf-btn { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+
+.cashflow-chart { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.cashflow-row { display: grid; grid-template-columns: 120px 1fr 90px; align-items: center; gap: 10px; font-size: 12px; }
+.cashflow-label { color: var(--muted); white-space: nowrap; }
+.cashflow-bar-track { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; height: 14px; overflow: hidden; }
+.cashflow-bar { height: 100%; }
+.cashflow-bar-positive { background: var(--ok); }
+.cashflow-bar-negative { background: var(--fail); }
+.cashflow-amount { text-align: right; white-space: nowrap; }
