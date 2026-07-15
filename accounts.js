@@ -8,7 +8,10 @@ let currentCompanyId = null;
 let allAccounts = [];
 let editingId = null;
 
-const FIELDS = ["name", "account_type", "currency", "opening_balance"];
+const FIELDS = [
+  "name", "account_type", "bank_name", "branch_name", "branch_code",
+  "account_number", "iban", "currency", "opening_balance"
+];
 
 const listEl = document.getElementById("account-list");
 const newBtn = document.getElementById("new-account-btn");
@@ -18,6 +21,8 @@ const formTitle = document.getElementById("account-form-title");
 const formError = document.getElementById("account-form-error");
 const cancelBtn = document.getElementById("account-cancel-btn");
 const logoutBtn = document.getElementById("logout-btn");
+const accountTypeSelect = document.getElementById("account_type");
+const bankFieldGroup = document.getElementById("bank-field-group");
 
 // ---- STARTUP --------------------------------------------------------------
 async function init() {
@@ -32,6 +37,12 @@ async function init() {
   currentCompanyId = company.id;
   await loadAccounts();
 }
+
+// ---- SHOW/HIDE BANK FIELDS --------------------------------------------------
+function updateBankFieldVisibility() {
+  bankFieldGroup.classList.toggle("hidden", accountTypeSelect.value !== "banka");
+}
+accountTypeSelect.addEventListener("change", updateBankFieldVisibility);
 
 // ---- LOAD + RENDER ----------------------------------------------------------
 async function loadAccounts() {
@@ -60,12 +71,15 @@ function renderList(accounts) {
   listEl.innerHTML = "";
   accounts.forEach((a) => {
     const typeLabel = a.account_type === "banka" ? "Banka" : "Kasa";
+    const bankInfo = a.account_type === "banka" && a.bank_name
+      ? ` · ${escapeHtml(a.bank_name)}${a.iban ? " · " + escapeHtml(a.iban) : ""}`
+      : "";
     const card = document.createElement("div");
     card.className = "customer-card";
     card.innerHTML = `
       <div class="customer-card-main">
         <strong>${escapeHtml(a.name)}</strong>
-        <span class="customer-card-sub">${typeLabel} · ${escapeHtml(a.currency)} · Açılış: ${Number(a.opening_balance).toFixed(2)}</span>
+        <span class="customer-card-sub">${typeLabel} · ${escapeHtml(a.currency)} · Açılış: ${Number(a.opening_balance).toFixed(2)}${bankInfo}</span>
       </div>
       <div class="customer-card-actions">
         <button class="edit-btn" data-id="${a.id}">Düzenle</button>
@@ -98,6 +112,7 @@ function openForNew() {
   document.getElementById("account_type").value = "kasa";
   document.getElementById("currency").value = "TRY";
   document.getElementById("opening_balance").value = 0;
+  updateBankFieldVisibility();
   overlay.classList.remove("hidden");
 }
 
@@ -112,6 +127,7 @@ function openForEdit(id) {
     const el = document.getElementById(f);
     if (el) el.value = a[f] ?? "";
   });
+  updateBankFieldVisibility();
   overlay.classList.remove("hidden");
 }
 
@@ -129,9 +145,8 @@ async function deleteAccount(id) {
   if (error) {
     if (error.message.includes("foreign key constraint")) {
       alert(
-        "Bu hesap silinemiyor çünkü en az bir faturada tahsilat kaydı için kullanılmış. " +
-        "Önce ilgili faturalarda \"Tahsil Edilecek Yap\" ile tahsilat kaydını kaldırmanız, " +
-        "sonra hesabı silmeniz gerekir."
+        "Bu hesap silinemiyor çünkü en az bir faturada veya giderde tahsilat/ödeme kaydı için kullanılmış. " +
+        "Önce ilgili kayıtlarda tahsilat/ödeme durumunu geri alıp sonra hesabı silmeniz gerekir."
       );
     } else {
       alert(`Silinemedi: ${error.message}`);
@@ -152,6 +167,14 @@ form.addEventListener("submit", async (e) => {
     if (!el) return;
     payload[f] = el.value === "" ? null : el.value;
   });
+
+  if (payload.account_type !== "banka") {
+    payload.bank_name = null;
+    payload.branch_name = null;
+    payload.branch_code = null;
+    payload.account_number = null;
+    payload.iban = null;
+  }
 
   if (!payload.name) {
     formError.textContent = "Hesap Adı zorunludur.";
