@@ -6,7 +6,7 @@
 // =========================================================
 
 let currentCompanyId = null;
-const initialized = {}; // which tabs have had their listeners wired already
+const initialized = {};
 
 const TURKISH_MONTHS = [
   "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
@@ -35,7 +35,7 @@ async function init() {
   showReportTab("tahsilatlar");
 }
 
-// ---- TAB SWITCHING (each tab's data only loads the first time it's opened) ----
+// ---- TAB SWITCHING ----------------------------------------------------------
 function showReportTab(tab) {
   document.querySelectorAll(".report-section").forEach((el) => el.classList.add("hidden"));
   document.getElementById(`tab-${tab}`).classList.remove("hidden");
@@ -52,6 +52,8 @@ function showReportTab(tab) {
   else if (tab === "giderler") initGiderlerTab();
   else if (tab === "gelirgider") initGelirGiderTab();
   else if (tab === "kdv") initKdvTab();
+  else if (tab === "kasabanka") initKasaBankaTab();
+  else if (tab === "nakitakisi") initNakitAkisiTab();
 }
 
 document.querySelectorAll("#report-tabs .filter-btn").forEach((btn) => {
@@ -382,7 +384,7 @@ async function loadGiderlerReport() {
 
 // ================= GELİR-GİDER =================
 let gelirGiderRange = { from: null, to: null };
-let gelirGiderBasis = "accrual"; // "accrual" = fatura/fiş tarihi, "cash" = tahsilat/ödeme tarihi
+let gelirGiderBasis = "accrual";
 
 function initGelirGiderTab() {
   initDateRangeFilter("gelirgider-date-range", (range) => {
@@ -536,6 +538,264 @@ async function loadKdvReport(year) {
       <td class="numeric">${row.hesaplanan.toFixed(2)}</td>
       <td class="numeric">${row.indirilecek.toFixed(2)}</td>
       <td class="numeric">${net.toFixed(2)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ================= KASA/BANKA =================
+let kbAccounts = [];
+let kbRange = { from: null, to: null };
+
+async function initKasaBankaTab() {
+  await loadKbAccounts();
+  initDateRangeFilter("kasabanka-date-range", (range) => {
+    kbRange = range;
+    loadKasaBankaReport();
+  });
+  document.getElementById("kb-account-select").addEventListener("change", loadKasaBankaReport);
+}
+
+async function loadKbAccounts() {
+  const { data } = await sb
+    .from("accounts")
+    .select("id, name, account_type, currency, opening_balance")
+    .eq("company_id", currentCompanyId)
+    .order("name", { ascending: true });
+
+  kbAccounts = data || [];
+  const select = document.getElementById("kb-account-select");
+  select.innerHTML = `<option value="">Tüm Hesaplar</option>`;
+  kbAccounts.forEach((a) => {
+    const opt = document.createElement("option");
+    opt.value = a.id;
+    opt.textContent = `${a.name} (${a.account_type === "banka" ? "Banka" : "Kasa"})`;
+    select.appendChild(opt);
+  });
+}
+
+// Opening balance + every collected invoice for that account − every paid
+// expense for that account. This is the "real" running total, computed from
+// the same transactions that already power the Faturalar/Giderler pages.
+async function computeAccountBalance(acc) {
+  const { data: invoicesIn } = await sb
+    .from("invoices")
+    .select("grand_total")
+    .eq("account_id", acc.id)
+    .eq("collection_status", "tahsil_edildi");
+  const { data: expensesOut } = await sb
+    .from("expenses")
+    .select("total_amount")
+    .eq("account_id", acc.id)
+    .eq("payment_status", "odendi");
+
+  const inSum = (invoicesIn || []).reduce((s, x) => s + Number(x.grand_total), 0);
+  const outSum = (expensesOut || []).reduce((s, x) => s + Number(x.total_amount), 0);
+  return (Number(acc.opening_balance) || 0) + inSum - outSum;
+}
+
+async function computePeriodInOut(accountId, range) {
+  let invQ = sb.from("invoices").select("grand_total").eq("company_id", currentCompanyId).eq("collection_status", "tahsil_edildi");
+  if (accountId) invQ = invQ.eq("account_id", accountId);
+  if (range.from) invQ = invQ.gte("collected_date", range.from);
+  if (range.to) invQ = invQ.lte("collected_date", range.to);
+  const { data: invoicesIn } = await invQ;
+
+  let expQ = sb.from("expenses").select("total_amount").eq("company_id", currentCompanyId).eq("payment_status", "odendi");
+  if (accountId) expQ = expQ.eq("account_id", accountId);
+  if (range.from) expQ = expQ.gte("paid_date", range.from);
+  if (range.to) expQ = expQ.lte("paid_date", range.to);
+  const { data: expensesOut } = await expQ;
+
+  const inAmt = (invoicesIn || []).reduce((s, x) => s + Number(x.grand_total), 0);
+  const outAmt = (expensesOut || []).reduce((s, x) => s + Number(x.total_amount), 0);
+  return { inAmt, outAmt };
+}
+
+async function loadKasaBankaReport() {
+  const accountId = document.getElementById("kb-account-select").value;
+  const ledgerSection = document.getElementById("kb-ledger-section");
+  const tbody = document.getElementById("kb-ledger-body");
+
+  if (!accountId) {
+    ledgerSection.classList.add("hidden");
+
+    let totalBalance = 0;
+    for (const acc of kbAccounts) {
+      totalBalance += await computeAccountBalance(acc);
+    }
+    document.getElementById("kb-balance").textContent = totalBalance.toFixed(2);
+
+    const { inAmt, outAmt } = await computePeriodInOut(null, kbRange);
+    document.getElementById("kb-period-in").textContent = inAmt.toFixed(2);
+    document.getElementById("kb-period-out").textContent = outAmt.toFixed(2);
+    return;
+  }
+
+  const acc = kbAccounts.find((a) => a.id === accountId);
+  if (!acc) return;
+  ledgerSection.classList.remove("hidden");
+
+  const balance = await computeAccountBalance(acc);
+  document.getElementById("kb-balance").textContent = `${balance.toFixed(2)} ${acc.currency}`;
+
+  const { inAmt, outAmt } = await computePeriodInOut(accountId, kbRange);
+  document.getElementById("kb-period-in").textContent = `${inAmt.toFixed(2)} ${acc.currency}`;
+  document.getElementById("kb-period-out").textContent = `${outAmt.toFixed(2)} ${acc.currency}`;
+
+  const { data: invoicesIn } = await sb
+    .from("invoices")
+    .select("collected_date, grand_total, invoice_name, invoice_number")
+    .eq("account_id", accountId)
+    .eq("collection_status", "tahsil_edildi");
+  const { data: expensesOut } = await sb
+    .from("expenses")
+    .select("paid_date, total_amount, expense_name")
+    .eq("account_id", accountId)
+    .eq("payment_status", "odendi");
+
+  let entries = [];
+  (invoicesIn || []).forEach((x) => entries.push({
+    date: x.collected_date,
+    desc: x.invoice_name || x.invoice_number || "Fatura Tahsilatı",
+    amount: Number(x.grand_total),
+  }));
+  (expensesOut || []).forEach((x) => entries.push({
+    date: x.paid_date,
+    desc: x.expense_name || "Gider Ödemesi",
+    amount: -Number(x.total_amount),
+  }));
+
+  entries.sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0));
+
+  // Running balance walks the FULL history (so it's always correct), but we
+  // only display rows that fall inside the selected date range.
+  let running = Number(acc.opening_balance) || 0;
+  const rows = entries.map((e) => {
+    running += e.amount;
+    return { ...e, running };
+  });
+
+  const displayRows = rows.filter((r) =>
+    (!kbRange.from || r.date >= kbRange.from) && (!kbRange.to || r.date <= kbRange.to)
+  );
+
+  tbody.innerHTML = "";
+  if (displayRows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="empty-state">Seçili aralıkta işlem yok.</td></tr>`;
+  }
+  displayRows.forEach((r) => {
+    const amountLabel = (r.amount >= 0 ? "+" : "") + r.amount.toFixed(2);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.date || ""}</td>
+      <td>${escapeHtml(r.desc)}</td>
+      <td class="numeric">${amountLabel}</td>
+      <td class="numeric">${r.running.toFixed(2)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ================= NAKİT AKIŞI =================
+async function initNakitAkisiTab() {
+  await loadNakitAkisiReport();
+}
+
+function renderCashflowChart(weeklyData) {
+  const maxAbs = Math.max(1, ...weeklyData.map((w) => Math.abs(w.net)));
+  const container = document.getElementById("cashflow-chart");
+  container.innerHTML = "";
+  weeklyData.forEach((w) => {
+    const pct = (Math.abs(w.net) / maxAbs) * 100;
+    const barClass = w.net >= 0 ? "cashflow-bar-positive" : "cashflow-bar-negative";
+    const row = document.createElement("div");
+    row.className = "cashflow-row";
+    row.innerHTML = `
+      <span class="cashflow-label">${w.label}</span>
+      <div class="cashflow-bar-track">
+        <div class="cashflow-bar ${barClass}" style="width:${pct}%;"></div>
+      </div>
+      <span class="cashflow-amount">${w.net >= 0 ? "+" : ""}${w.net.toFixed(2)}</span>
+    `;
+    container.appendChild(row);
+  });
+}
+
+async function loadNakitAkisiReport() {
+  const { data: accounts } = await sb
+    .from("accounts")
+    .select("id, opening_balance")
+    .eq("company_id", currentCompanyId);
+
+  let totalBalance = 0;
+  for (const acc of (accounts || [])) {
+    totalBalance += await computeAccountBalance(acc);
+  }
+  document.getElementById("na-total-balance").textContent = totalBalance.toFixed(2);
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: uncollected } = await sb
+    .from("invoices")
+    .select("grand_total, due_date")
+    .eq("company_id", currentCompanyId)
+    .neq("collection_status", "tahsil_edildi");
+  const { data: unpaid } = await sb
+    .from("expenses")
+    .select("total_amount, due_date")
+    .eq("company_id", currentCompanyId)
+    .eq("payment_status", "odenecek");
+
+  let overdueIn = 0, overdueOut = 0, unplannedIn = 0, unplannedOut = 0;
+  const futureIn = {};
+  const futureOut = {};
+
+  (uncollected || []).forEach((x) => {
+    const amt = Number(x.grand_total) || 0;
+    if (!x.due_date) { unplannedIn += amt; return; }
+    if (x.due_date < today) { overdueIn += amt; return; }
+    const weekIdx = Math.floor((new Date(x.due_date) - new Date(today)) / (7 * 86400000));
+    if (weekIdx >= 0 && weekIdx < 12) futureIn[weekIdx] = (futureIn[weekIdx] || 0) + amt;
+  });
+
+  (unpaid || []).forEach((x) => {
+    const amt = Number(x.total_amount) || 0;
+    if (!x.due_date) { unplannedOut += amt; return; }
+    if (x.due_date < today) { overdueOut += amt; return; }
+    const weekIdx = Math.floor((new Date(x.due_date) - new Date(today)) / (7 * 86400000));
+    if (weekIdx >= 0 && weekIdx < 12) futureOut[weekIdx] = (futureOut[weekIdx] || 0) + amt;
+  });
+
+  document.getElementById("na-overdue-in").textContent = overdueIn.toFixed(2);
+  document.getElementById("na-overdue-out").textContent = overdueOut.toFixed(2);
+  document.getElementById("na-unplanned-in").textContent = unplannedIn.toFixed(2);
+  document.getElementById("na-unplanned-out").textContent = unplannedOut.toFixed(2);
+
+  const weeklyData = [];
+  let cumulative = totalBalance;
+  for (let i = 0; i < 12; i++) {
+    const net = (futureIn[i] || 0) - (futureOut[i] || 0);
+    cumulative += net;
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() + i * 7);
+    weeklyData.push({
+      label: `Hafta ${i + 1} (${startDate.toISOString().slice(5, 10)})`,
+      net,
+      projected: cumulative,
+    });
+  }
+
+  renderCashflowChart(weeklyData);
+
+  const tbody = document.getElementById("na-weekly-body");
+  tbody.innerHTML = "";
+  weeklyData.forEach((w) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${w.label}</td>
+      <td class="numeric">${w.net >= 0 ? "+" : ""}${w.net.toFixed(2)}</td>
+      <td class="numeric">${w.projected.toFixed(2)}</td>
     `;
     tbody.appendChild(tr);
   });
