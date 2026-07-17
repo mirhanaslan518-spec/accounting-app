@@ -27,7 +27,12 @@
   <main class="container">
     <div class="page-header">
       <h1>Hizmet ve Ürünler</h1>
-      <button id="new-product-btn">+ Yeni Ürün</button>
+      <div class="header-actions">
+        <button id="new-product-btn">+ Yeni Ürün</button>
+        <button id="export-btn" class="secondary">Dışa Aktar</button>
+        <button id="import-btn" class="secondary">İçe Aktar</button>
+        <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv" class="hidden">
+      </div>
     </div>
 
     <input type="text" id="search-input" class="search-box" placeholder="Ürün ara...">
@@ -65,9 +70,12 @@
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    import * as XLSX from 'https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs';
     window.supabase = { createClient };
+    window.XLSX = XLSX;
   </script>
   <script src="shared.js" defer></script>
+  <script src="csv-tools.js" defer></script>
   <script src="products.js" defer></script>
 </body>
 </html>
