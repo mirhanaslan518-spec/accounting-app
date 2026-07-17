@@ -1,7 +1,7 @@
 // =========================================================
 // employees.js — logic for employees.html (Çalışanlar)
-// Relies on shared.js being loaded first (sb, requireSession,
-// getMyCompany).
+// Relies on shared.js (sb, requireSession, getMyCompany) and
+// csv-tools.js (exportToExcel, setupImportButton).
 // =========================================================
 
 let currentCompanyId = null;
@@ -9,6 +9,22 @@ let allEmployees = [];
 let editingId = null;
 
 const FIELDS = ["full_name", "email", "national_id", "iban"];
+
+const EXPORT_COLUMNS = [
+  { key: "full_name", header: "Adı Soyadı" },
+  { key: "email", header: "E-posta" },
+  { key: "national_id", header: "TC Kimlik No" },
+  { key: "iban", header: "IBAN" },
+];
+
+function mapImportRowToEmployee(row) {
+  return {
+    full_name: (row["Adı Soyadı"] || "").toString().trim(),
+    email: row["E-posta"] || null,
+    national_id: row["TC Kimlik No"] || null,
+    iban: row["IBAN"] || null,
+  };
+}
 
 const listEl = document.getElementById("employee-list");
 const searchInput = document.getElementById("search-input");
@@ -32,6 +48,8 @@ async function init() {
   }
   currentCompanyId = company.id;
   await loadEmployees();
+
+  setupImportButton("import-btn", "import-file-input", handleImportRows);
 }
 
 // ---- LOAD + RENDER ----------------------------------------------------------
@@ -87,6 +105,33 @@ function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str || "";
   return div.innerHTML;
+}
+
+// ---- EXPORT / IMPORT ---------------------------------------------------------
+document.getElementById("export-btn").addEventListener("click", () => {
+  exportToExcel(allEmployees, EXPORT_COLUMNS, "calisanlar.xlsx");
+});
+
+async function handleImportRows(rows) {
+  const validRows = rows.filter((r) => (r["Adı Soyadı"] || "").toString().trim() !== "");
+  if (validRows.length === 0) {
+    alert('İçe aktarılacak geçerli satır bulunamadı ("Adı Soyadı" sütunu boş olmamalı).');
+    return;
+  }
+
+  const confirmed = confirm(`${validRows.length} çalışan içe aktarılacak. Devam edilsin mi?`);
+  if (!confirmed) return;
+
+  const payloads = validRows.map((r) => ({ ...mapImportRowToEmployee(r), company_id: currentCompanyId }));
+
+  const { error } = await sb.from("employees").insert(payloads);
+  if (error) {
+    alert(`İçe aktarma başarısız: ${error.message}`);
+    return;
+  }
+
+  alert(`${payloads.length} çalışan başarıyla içe aktarıldı.`);
+  await loadEmployees();
 }
 
 // ---- FORM: OPEN / CLOSE -------------------------------------------------------
