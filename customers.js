@@ -1,20 +1,73 @@
 // =========================================================
 // customers.js — logic for customers.html
-// Relies on shared.js being loaded first (sb, requireSession,
-// getMyCompany).
+// Relies on shared.js (sb, requireSession, getMyCompany) and
+// csv-tools.js (exportToExcel, setupImportButton).
 // =========================================================
 
 let currentCompanyId = null;
 let allCustomers = [];
-let editingId = null; // null = adding a new customer, otherwise = id being edited
+let editingId = null;
 
-// Every field in the form, matched to a column in the "customers" table.
 const FIELDS = [
   "customer_type", "company_title", "short_name", "tax_id", "tax_office", "category",
   "email", "phone", "fax", "address", "postal_code", "district", "city",
   "iban", "price_list", "currency", "opening_balance",
   "contact_name", "contact_email", "contact_phone", "notes"
 ];
+
+// Shared shape for export columns and their human-readable Turkish headers —
+// import uses the same headers in reverse, so exporting then re-importing
+// a file works cleanly without a separate mapping step.
+const EXPORT_COLUMNS = [
+  { key: "customer_type", header: "Tür", format: (v) => (v === "gercek" ? "Gerçek Kişi" : "Tüzel Kişi") },
+  { key: "company_title", header: "Firma Unvanı" },
+  { key: "short_name", header: "Kısa İsim" },
+  { key: "tax_id", header: "VKN/TCKN" },
+  { key: "tax_office", header: "Vergi Dairesi" },
+  { key: "category", header: "Kategori" },
+  { key: "email", header: "E-posta" },
+  { key: "phone", header: "Telefon" },
+  { key: "fax", header: "Faks" },
+  { key: "address", header: "Açık Adres" },
+  { key: "postal_code", header: "Posta Kodu" },
+  { key: "district", header: "İlçe" },
+  { key: "city", header: "İl" },
+  { key: "iban", header: "IBAN" },
+  { key: "price_list", header: "Fiyat Listesi" },
+  { key: "currency", header: "Döviz" },
+  { key: "opening_balance", header: "Açılış Bakiyesi" },
+  { key: "contact_name", header: "Yetkili Adı" },
+  { key: "contact_email", header: "Yetkili E-posta" },
+  { key: "contact_phone", header: "Yetkili Telefon" },
+  { key: "notes", header: "Notlar" },
+];
+
+function mapImportRowToCustomer(row) {
+  const tur = (row["Tür"] || "").toString().trim();
+  return {
+    customer_type: tur === "Gerçek Kişi" ? "gercek" : "tuzel",
+    company_title: (row["Firma Unvanı"] || "").toString().trim(),
+    short_name: row["Kısa İsim"] || null,
+    tax_id: row["VKN/TCKN"] || null,
+    tax_office: row["Vergi Dairesi"] || null,
+    category: row["Kategori"] || null,
+    email: row["E-posta"] || null,
+    phone: row["Telefon"] || null,
+    fax: row["Faks"] || null,
+    address: row["Açık Adres"] || null,
+    postal_code: row["Posta Kodu"] || null,
+    district: row["İlçe"] || null,
+    city: row["İl"] || null,
+    iban: row["IBAN"] || null,
+    price_list: row["Fiyat Listesi"] || null,
+    currency: row["Döviz"] || "TRY",
+    opening_balance: row["Açılış Bakiyesi"] || 0,
+    contact_name: row["Yetkili Adı"] || null,
+    contact_email: row["Yetkili E-posta"] || null,
+    contact_phone: row["Yetkili Telefon"] || null,
+    notes: row["Notlar"] || null,
+  };
+}
 
 const listEl = document.getElementById("customer-list");
 const searchInput = document.getElementById("search-input");
@@ -26,9 +79,9 @@ const formError = document.getElementById("form-error");
 const cancelBtn = document.getElementById("cancel-btn");
 const logoutBtn = document.getElementById("logout-btn");
 
-// ---- STARTUP -------------------------------------------------------------
+// ---- STARTUP --------------------------------------------------------------
 async function init() {
-  const session = await requireSession(); // sends user to index.html if not logged in
+  const session = await requireSession();
   if (!session) return;
 
   const company = await getMyCompany(session.user.id);
@@ -38,9 +91,11 @@ async function init() {
   }
   currentCompanyId = company.id;
   await loadCustomers();
+
+  setupImportButton("import-btn", "import-file-input", handleImportRows);
 }
 
-// ---- LOAD + RENDER THE LIST ----------------------------------------------
+// ---- LOAD + RENDER ----------------------------------------------------------
 async function loadCustomers() {
   listEl.innerHTML = `<p class="empty-state">Yükleniyor...</p>`;
 
@@ -89,14 +144,40 @@ function renderList(customers) {
   });
 }
 
-// Prevents customer-entered text from being read as HTML (basic safety).
 function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str || "";
   return div.innerHTML;
 }
 
-// ---- FORM: OPEN / CLOSE ---------------------------------------------------
+// ---- EXPORT / IMPORT ---------------------------------------------------------
+document.getElementById("export-btn").addEventListener("click", () => {
+  exportToExcel(allCustomers, EXPORT_COLUMNS, "musteriler.xlsx");
+});
+
+async function handleImportRows(rows) {
+  const validRows = rows.filter((r) => (r["Firma Unvanı"] || "").toString().trim() !== "");
+  if (validRows.length === 0) {
+    alert('İçe aktarılacak geçerli satır bulunamadı ("Firma Unvanı" sütunu boş olmamalı).');
+    return;
+  }
+
+  const confirmed = confirm(`${validRows.length} müşteri içe aktarılacak. Devam edilsin mi?`);
+  if (!confirmed) return;
+
+  const payloads = validRows.map((r) => ({ ...mapImportRowToCustomer(r), company_id: currentCompanyId }));
+
+  const { error } = await sb.from("customers").insert(payloads);
+  if (error) {
+    alert(`İçe aktarma başarısız: ${error.message}`);
+    return;
+  }
+
+  alert(`${payloads.length} müşteri başarıyla içe aktarıldı.`);
+  await loadCustomers();
+}
+
+// ---- FORM: OPEN / CLOSE -------------------------------------------------------
 function openForNew() {
   editingId = null;
   formTitle.textContent = "Yeni Müşteri";
@@ -171,7 +252,7 @@ form.addEventListener("submit", async (e) => {
   await loadCustomers();
 });
 
-// ---- SEARCH (filters the already-loaded list, no extra database call) ----
+// ---- SEARCH -----------------------------------------------------------------
 searchInput.addEventListener("input", () => {
   const q = searchInput.value.trim().toLowerCase();
   if (!q) {
