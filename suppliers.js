@@ -1,7 +1,7 @@
 // =========================================================
 // suppliers.js — logic for suppliers.html
-// Relies on shared.js being loaded first (sb, requireSession,
-// getMyCompany).
+// Relies on shared.js (sb, requireSession, getMyCompany) and
+// csv-tools.js (exportToExcel, setupImportButton).
 // =========================================================
 
 let currentCompanyId = null;
@@ -12,6 +12,37 @@ const FIELDS = [
   "supplier_type", "company_title", "short_name", "tax_id", "tax_office",
   "category", "email", "phone", "address", "iban", "notes"
 ];
+
+const EXPORT_COLUMNS = [
+  { key: "supplier_type", header: "Tür", format: (v) => (v === "gercek" ? "Gerçek Kişi" : "Tüzel Kişi") },
+  { key: "company_title", header: "Firma Unvanı" },
+  { key: "short_name", header: "Kısa İsim" },
+  { key: "tax_id", header: "VKN/TCKN" },
+  { key: "tax_office", header: "Vergi Dairesi" },
+  { key: "category", header: "Kategori" },
+  { key: "email", header: "E-posta" },
+  { key: "phone", header: "Telefon" },
+  { key: "address", header: "Açık Adres" },
+  { key: "iban", header: "IBAN" },
+  { key: "notes", header: "Notlar" },
+];
+
+function mapImportRowToSupplier(row) {
+  const tur = (row["Tür"] || "").toString().trim();
+  return {
+    supplier_type: tur === "Gerçek Kişi" ? "gercek" : "tuzel",
+    company_title: (row["Firma Unvanı"] || "").toString().trim(),
+    short_name: row["Kısa İsim"] || null,
+    tax_id: row["VKN/TCKN"] || null,
+    tax_office: row["Vergi Dairesi"] || null,
+    category: row["Kategori"] || null,
+    email: row["E-posta"] || null,
+    phone: row["Telefon"] || null,
+    address: row["Açık Adres"] || null,
+    iban: row["IBAN"] || null,
+    notes: row["Notlar"] || null,
+  };
+}
 
 const listEl = document.getElementById("supplier-list");
 const searchInput = document.getElementById("search-input");
@@ -35,6 +66,8 @@ async function init() {
   }
   currentCompanyId = company.id;
   await loadSuppliers();
+
+  setupImportButton("import-btn", "import-file-input", handleImportRows);
 }
 
 // ---- LOAD + RENDER ----------------------------------------------------------
@@ -90,6 +123,33 @@ function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str || "";
   return div.innerHTML;
+}
+
+// ---- EXPORT / IMPORT ---------------------------------------------------------
+document.getElementById("export-btn").addEventListener("click", () => {
+  exportToExcel(allSuppliers, EXPORT_COLUMNS, "tedarikciler.xlsx");
+});
+
+async function handleImportRows(rows) {
+  const validRows = rows.filter((r) => (r["Firma Unvanı"] || "").toString().trim() !== "");
+  if (validRows.length === 0) {
+    alert('İçe aktarılacak geçerli satır bulunamadı ("Firma Unvanı" sütunu boş olmamalı).');
+    return;
+  }
+
+  const confirmed = confirm(`${validRows.length} tedarikçi içe aktarılacak. Devam edilsin mi?`);
+  if (!confirmed) return;
+
+  const payloads = validRows.map((r) => ({ ...mapImportRowToSupplier(r), company_id: currentCompanyId }));
+
+  const { error } = await sb.from("suppliers").insert(payloads);
+  if (error) {
+    alert(`İçe aktarma başarısız: ${error.message}`);
+    return;
+  }
+
+  alert(`${payloads.length} tedarikçi başarıyla içe aktarıldı.`);
+  await loadSuppliers();
 }
 
 // ---- FORM: OPEN / CLOSE -------------------------------------------------------
