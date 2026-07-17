@@ -1,19 +1,30 @@
 // =========================================================
 // products.js — logic for products.html
-// Relies on shared.js being loaded first (sb, requireSession,
-// getMyCompany).
-//
-// Note: this only exposes name / unit / price / tax rate — the
-// fields needed for invoice line items to autofill. track_stock
-// and stock_quantity stay at their database defaults until the
-// full Stok module gets built later; no need to expose them yet.
+// Relies on shared.js (sb, requireSession, getMyCompany) and
+// csv-tools.js (exportToExcel, setupImportButton).
 // =========================================================
 
 let currentCompanyId = null;
 let allProducts = [];
-let editingId = null; // null = new product, otherwise = id being edited
+let editingId = null;
 
 const FIELDS = ["name", "unit", "unit_price", "tax_rate"];
+
+const EXPORT_COLUMNS = [
+  { key: "name", header: "Hizmet / Ürün Adı" },
+  { key: "unit", header: "Birim" },
+  { key: "unit_price", header: "Satış Fiyatı" },
+  { key: "tax_rate", header: "KDV %" },
+];
+
+function mapImportRowToProduct(row) {
+  return {
+    name: (row["Hizmet / Ürün Adı"] || "").toString().trim(),
+    unit: row["Birim"] || "adet",
+    unit_price: row["Satış Fiyatı"] || 0,
+    tax_rate: row["KDV %"] || 18,
+  };
+}
 
 const listEl = document.getElementById("product-list");
 const searchInput = document.getElementById("search-input");
@@ -37,6 +48,8 @@ async function init() {
   }
   currentCompanyId = company.id;
   await loadProducts();
+
+  setupImportButton("import-btn", "import-file-input", handleImportRows);
 }
 
 // ---- LOAD + RENDER ----------------------------------------------------------
@@ -92,6 +105,33 @@ function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str || "";
   return div.innerHTML;
+}
+
+// ---- EXPORT / IMPORT ---------------------------------------------------------
+document.getElementById("export-btn").addEventListener("click", () => {
+  exportToExcel(allProducts, EXPORT_COLUMNS, "urunler.xlsx");
+});
+
+async function handleImportRows(rows) {
+  const validRows = rows.filter((r) => (r["Hizmet / Ürün Adı"] || "").toString().trim() !== "");
+  if (validRows.length === 0) {
+    alert('İçe aktarılacak geçerli satır bulunamadı ("Hizmet / Ürün Adı" sütunu boş olmamalı).');
+    return;
+  }
+
+  const confirmed = confirm(`${validRows.length} ürün içe aktarılacak. Devam edilsin mi?`);
+  if (!confirmed) return;
+
+  const payloads = validRows.map((r) => ({ ...mapImportRowToProduct(r), company_id: currentCompanyId }));
+
+  const { error } = await sb.from("products").insert(payloads);
+  if (error) {
+    alert(`İçe aktarma başarısız: ${error.message}`);
+    return;
+  }
+
+  alert(`${payloads.length} ürün başarıyla içe aktarıldı.`);
+  await loadProducts();
 }
 
 // ---- FORM: OPEN / CLOSE -------------------------------------------------------
