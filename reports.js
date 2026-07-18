@@ -1,8 +1,9 @@
 // =========================================================
 // reports.js — logic for reports.html
-// Relies on shared.js being loaded first (sb, requireSession,
-// getMyCompany, categorizeInvoice, categorizeExpense,
-// getDateRangeForPreset, initDateRangeFilter).
+// Relies on shared.js (sb, requireSession, getMyCompany,
+// categorizeInvoice, categorizeExpense, getDateRangeForPreset,
+// initDateRangeFilter) and csv-tools.js (exportToExcel via
+// window.XLSX, used here through exportTableToExcel).
 // =========================================================
 
 let currentCompanyId = null;
@@ -18,6 +19,46 @@ function escapeHtml(str) {
   div.textContent = str || "";
   return div.innerHTML;
 }
+
+// ---- GENERIC TABLE EXPORT ----------------------------------------------------
+// Reads whatever is currently rendered in a <table id="..."> — headers from
+// <thead>, data from <tbody> — and exports it. Works for every report tab
+// without needing a separate column-definition list per report, since the
+// table already IS the data we want to export.
+function exportTableToExcel(tableId, filename) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+
+  const headers = Array.from(table.querySelectorAll("thead th")).map((th) => th.textContent.trim());
+  const bodyRows = Array.from(table.querySelectorAll("tbody tr")).filter(
+    (tr) => !tr.querySelector("td.empty-state")
+  );
+
+  const rows = bodyRows.map((tr) => {
+    const cells = Array.from(tr.querySelectorAll("td"));
+    const obj = {};
+    cells.forEach((td, i) => {
+      obj[headers[i] || `Sütun ${i + 1}`] = td.textContent.trim();
+    });
+    return obj;
+  });
+
+  if (rows.length === 0) {
+    alert("Dışa aktarılacak veri yok.");
+    return;
+  }
+
+  const ws = window.XLSX.utils.json_to_sheet(rows);
+  const wb = window.XLSX.utils.book_new();
+  window.XLSX.utils.book_append_sheet(wb, ws, "Rapor");
+  window.XLSX.writeFile(wb, filename);
+}
+
+document.querySelectorAll(".export-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    exportTableToExcel(btn.dataset.table, btn.dataset.filename);
+  });
+});
 
 // ---- STARTUP --------------------------------------------------------------
 async function init() {
@@ -574,9 +615,6 @@ async function loadKbAccounts() {
   });
 }
 
-// Opening balance + every collected invoice for that account − every paid
-// expense for that account. This is the "real" running total, computed from
-// the same transactions that already power the Faturalar/Giderler pages.
 async function computeAccountBalance(acc) {
   const { data: invoicesIn } = await sb
     .from("invoices")
@@ -668,8 +706,6 @@ async function loadKasaBankaReport() {
 
   entries.sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0));
 
-  // Running balance walks the FULL history (so it's always correct), but we
-  // only display rows that fall inside the selected date range.
   let running = Number(acc.opening_balance) || 0;
   const rows = entries.map((e) => {
     running += e.amount;
