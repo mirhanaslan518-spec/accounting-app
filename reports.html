@@ -67,8 +67,11 @@
         </div>
       </div>
 
-      <p class="report-subtitle">Güncel Bekleyen Bakiye (bugün itibarıyla, vade durumuna göre)</p>
-      <table class="report-table">
+      <div class="report-header-row">
+        <p class="report-subtitle">Güncel Bekleyen Bakiye (bugün itibarıyla, vade durumuna göre)</p>
+        <button type="button" class="secondary export-btn" data-table="tahsilatlar-table" data-filename="tahsilatlar_raporu.xlsx">Dışa Aktar</button>
+      </div>
+      <table class="report-table" id="tahsilatlar-table">
         <thead>
           <tr><th>Durum</th><th class="numeric">Adet</th><th class="numeric">Tutar</th></tr>
         </thead>
@@ -103,8 +106,11 @@
         </div>
       </div>
 
-      <p class="report-subtitle">Güncel Bekleyen Bakiye (bugün itibarıyla, vade durumuna göre)</p>
-      <table class="report-table">
+      <div class="report-header-row">
+        <p class="report-subtitle">Güncel Bekleyen Bakiye (bugün itibarıyla, vade durumuna göre)</p>
+        <button type="button" class="secondary export-btn" data-table="odemeler-table" data-filename="odemeler_raporu.xlsx">Dışa Aktar</button>
+      </div>
+      <table class="report-table" id="odemeler-table">
         <thead>
           <tr><th>Durum</th><th class="numeric">Adet</th><th class="numeric">Tutar</th></tr>
         </thead>
@@ -139,13 +145,16 @@
         <input type="checkbox" id="satislar-unpaid-only"> Sadece Tahsil Edilmemiş Göster
       </label>
 
-      <div class="filter-bar" id="satislar-view-tabs">
-        <button type="button" class="filter-btn active" data-view="faturalar">Faturalar</button>
-        <button type="button" class="filter-btn" data-view="musteriler">Müşteriler</button>
-        <button type="button" class="filter-btn" data-view="urunler">Hizmet/Ürünler</button>
+      <div class="report-header-row">
+        <div class="filter-bar" id="satislar-view-tabs">
+          <button type="button" class="filter-btn active" data-view="faturalar">Faturalar</button>
+          <button type="button" class="filter-btn" data-view="musteriler">Müşteriler</button>
+          <button type="button" class="filter-btn" data-view="urunler">Hizmet/Ürünler</button>
+        </div>
+        <button type="button" class="secondary export-btn" data-table="satislar-table" data-filename="satislar_raporu.xlsx">Dışa Aktar</button>
       </div>
 
-      <table class="report-table">
+      <table class="report-table" id="satislar-table">
         <thead id="satislar-thead"></thead>
         <tbody id="satislar-tbody"></tbody>
       </table>
@@ -178,13 +187,16 @@
         <input type="checkbox" id="giderler-unpaid-only"> Sadece Ödenmemiş Göster
       </label>
 
-      <div class="filter-bar" id="giderler-view-tabs">
-        <button type="button" class="filter-btn active" data-view="giderler">Giderler</button>
-        <button type="button" class="filter-btn" data-view="tedarikciler">Tedarikçiler</button>
-        <button type="button" class="filter-btn" data-view="urunler">Hizmet/Ürünler</button>
+      <div class="report-header-row">
+        <div class="filter-bar" id="giderler-view-tabs">
+          <button type="button" class="filter-btn active" data-view="giderler">Giderler</button>
+          <button type="button" class="filter-btn" data-view="tedarikciler">Tedarikçiler</button>
+          <button type="button" class="filter-btn" data-view="urunler">Hizmet/Ürünler</button>
+        </div>
+        <button type="button" class="secondary export-btn" data-table="giderler-table" data-filename="giderler_raporu.xlsx">Dışa Aktar</button>
       </div>
 
-      <table class="report-table">
+      <table class="report-table" id="giderler-table">
         <thead id="giderler-thead"></thead>
         <tbody id="giderler-tbody"></tbody>
       </table>
@@ -230,8 +242,11 @@
         </div>
       </div>
 
-      <p class="report-subtitle">Aylık Dağılım</p>
-      <table class="report-table">
+      <div class="report-header-row">
+        <p class="report-subtitle">Aylık Dağılım</p>
+        <button type="button" class="secondary export-btn" data-table="gelirgider-table" data-filename="gelir_gider_raporu.xlsx">Dışa Aktar</button>
+      </div>
+      <table class="report-table" id="gelirgider-table">
         <thead>
           <tr><th>Ay</th><th class="numeric">Gelir</th><th class="numeric">Gider</th><th class="numeric">Net</th></tr>
         </thead>
@@ -245,7 +260,11 @@
         <select id="kdv-year"></select>
       </label>
 
-      <table class="report-table">
+      <div class="report-header-row">
+        <span></span>
+        <button type="button" class="secondary export-btn" data-table="kdv-table" data-filename="kdv_raporu.xlsx">Dışa Aktar</button>
+      </div>
+      <table class="report-table" id="kdv-table">
         <thead>
           <tr><th>Ay</th><th class="numeric">Hesaplanan KDV</th><th class="numeric">İndirilecek KDV</th><th class="numeric">Net KDV</th></tr>
         </thead>
@@ -293,8 +312,11 @@
       </div>
 
       <div id="kb-ledger-section" class="hidden">
-        <p class="report-subtitle">Hesap Ekstresi (seçili dönem)</p>
-        <table class="report-table">
+        <div class="report-header-row">
+          <p class="report-subtitle">Hesap Ekstresi (seçili dönem)</p>
+          <button type="button" class="secondary export-btn" data-table="kb-ledger-table" data-filename="kasa_banka_ekstresi.xlsx">Dışa Aktar</button>
+        </div>
+        <table class="report-table" id="kb-ledger-table">
           <thead>
             <tr><th>Tarih</th><th>Açıklama</th><th class="numeric">Tutar</th><th class="numeric">Bakiye</th></tr>
           </thead>
@@ -331,8 +353,11 @@
       <p class="report-subtitle">Gelecek 12 Hafta — Net Nakit Akışı</p>
       <div class="cashflow-chart" id="cashflow-chart"></div>
 
-      <p class="report-subtitle">Haftalık Detay</p>
-      <table class="report-table">
+      <div class="report-header-row">
+        <p class="report-subtitle">Haftalık Detay</p>
+        <button type="button" class="secondary export-btn" data-table="na-weekly-table" data-filename="nakit_akisi_raporu.xlsx">Dışa Aktar</button>
+      </div>
+      <table class="report-table" id="na-weekly-table">
         <thead>
           <tr><th>Hafta</th><th class="numeric">Net</th><th class="numeric">Projeksiyon Bakiye</th></tr>
         </thead>
@@ -343,9 +368,12 @@
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    import * as XLSX from 'https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs';
     window.supabase = { createClient };
+    window.XLSX = XLSX;
   </script>
   <script src="shared.js" defer></script>
+  <script src="csv-tools.js" defer></script>
   <script src="reports.js" defer></script>
 </body>
 </html>
