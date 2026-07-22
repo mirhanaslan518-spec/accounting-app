@@ -12,6 +12,11 @@ const userEmailEl = document.getElementById("user-email");
 const companyNameEl = document.getElementById("company-name");
 const logoutBtn = document.getElementById("logout-btn");
 
+const forgotLink = document.getElementById("forgot-password-link");
+const forgotForm = document.getElementById("forgot-password-form");
+const forgotError = document.getElementById("forgot-error");
+const forgotSuccess = document.getElementById("forgot-success");
+
 async function checkSession() {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
@@ -40,9 +45,6 @@ async function showApp(session) {
 }
 
 // ---- DASHBOARD: Tahsilatlar + Ödemeler ------------------------------------------
-// Note: amounts are summed across all invoices/expenses regardless of
-// currency. Fine at your current scale — worth splitting by currency later
-// if you start billing/paying in more than one.
 async function loadDashboard(companyId) {
   await loadReceivables(companyId);
   await loadPayables(companyId);
@@ -88,7 +90,7 @@ async function loadPayables(companyId) {
 
   expenses.forEach((x) => {
     const status = categorizeExpense(x);
-    if (status.key === "odendi") return; // covers both Ödendi and Çalışan Cebinden Ödedi
+    if (status.key === "odendi") return;
 
     const amount = Number(x.total_amount) || 0;
     totalPayable += amount;
@@ -104,6 +106,7 @@ async function loadPayables(companyId) {
   document.getElementById("pay-stat-unplanned").textContent = unplanned.toFixed(2);
 }
 
+// ---- LOGIN ------------------------------------------------------------------
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   loginError.textContent = "";
@@ -121,6 +124,29 @@ loginForm.addEventListener("submit", async (e) => {
 logoutBtn.addEventListener("click", async () => {
   await sb.auth.signOut();
   showLogin();
+});
+
+// ---- FORGOT PASSWORD ----------------------------------------------------------
+forgotLink.addEventListener("click", (e) => {
+  e.preventDefault();
+  forgotForm.classList.toggle("hidden");
+});
+
+forgotForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  forgotError.textContent = "";
+  forgotSuccess.textContent = "";
+
+  const email = document.getElementById("forgot-email").value;
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password.html`,
+  });
+
+  if (error) {
+    forgotError.textContent = error.message;
+    return;
+  }
+  forgotSuccess.textContent = "E-postanıza bir sıfırlama bağlantısı gönderildi.";
 });
 
 checkSession();
