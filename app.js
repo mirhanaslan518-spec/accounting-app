@@ -106,16 +106,28 @@ async function loadPayables(companyId) {
   document.getElementById("pay-stat-unplanned").textContent = unplanned.toFixed(2);
 }
 
-// ---- LOGIN ------------------------------------------------------------------
+// ---- LOGIN (now includes the Turnstile token, if the widget rendered) ------------
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   loginError.textContent = "";
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  // Turnstile writes its result into a hidden input named
+  // "cf-turnstile-response" inside the widget's container div once solved.
+  const turnstileInput = document.querySelector('#login-turnstile input[name="cf-turnstile-response"]');
+  const turnstileToken = turnstileInput ? turnstileInput.value : null;
+
+  const { data, error } = await sb.auth.signInWithPassword({
+    email,
+    password,
+    ...(turnstileToken ? { options: { captchaToken: turnstileToken } } : {}),
+  });
+
   if (error) {
     loginError.textContent = error.message;
+    // Tokens are single-use — a fresh one is needed before the next attempt.
+    if (window.turnstile) window.turnstile.reset();
     return;
   }
   showApp(data.session);
