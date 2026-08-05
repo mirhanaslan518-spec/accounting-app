@@ -3,7 +3,7 @@
 // Relies on shared.js being loaded first (sb, requireSession,
 // getMyCompany, categorizeInvoice, categorizeExpense).
 // =========================================================
-
+//this is a comment
 const loginWrapper = document.getElementById("login-wrapper");
 const appSection = document.getElementById("app-section");
 const loginForm = document.getElementById("login-form");
