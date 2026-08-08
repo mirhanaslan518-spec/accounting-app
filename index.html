@@ -22,7 +22,7 @@
           <input type="email" id="email" required autocomplete="username">
           <label for="password">Şifre</label>
           <input type="password" id="password" required autocomplete="current-password">
-          <div class="cf-turnstile" id="login-turnstile" data-sitekey="0x4AAAAAAD8TpQzWt5njsXAA"></div>
+          <div class="cf-turnstile" id="login-turnstile" data-sitekey="PASTE_YOUR_TURNSTILE_SITE_KEY_HERE"></div>
           <button type="submit">Giriş Yap</button>
           <p id="login-error" class="error"></p>
         </form>
@@ -102,6 +102,18 @@
           <strong class="stat-value" id="pay-stat-unplanned">0.00</strong>
         </div>
       </div>
+
+      <div class="section-header-row">
+        <p class="section-title">Nakit Akışı (Önümüzdeki 12 Hafta)</p>
+        <a href="reports.html" class="nav-link">Detaylı Görünüm →</a>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card stat-card-primary">
+          <span class="stat-label">Toplam Bakiye (Tüm Hesaplar)</span>
+          <strong class="stat-value" id="cf-total-balance">0.00</strong>
+        </div>
+      </div>
+      <div class="cashflow-chart" id="home-cashflow-chart"></div>
 
       <p class="hint">Soldaki menüden istediğiniz sayfaya gidebilirsiniz.</p>
     </main>

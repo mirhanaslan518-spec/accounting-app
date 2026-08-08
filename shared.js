@@ -1,14 +1,13 @@
 // =========================================================
 // shared.js
 // Loaded on EVERY page, before app.js / customers.js / etc.
-// Holds the one Supabase connection and a couple of helper
-// functions so we don't repeat this code on every new page.
+// Holds the one Supabase connection and helper functions reused
+// across pages.
 // =========================================================
 
 // ---- 1. CONNECT TO SUPABASE --------------------------------------------
-// Use the SAME values you already put in app.js during Sprint 0.
-const SUPABASE_URL = "https://pwadtzdtdgfinbzigtis.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_JlunJBttQl8sdvcPyQM8vA_2EtDz5GS";
+const SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL_HERE";
+const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -68,7 +67,6 @@ function categorizeExpense(x) {
 }
 
 // ---- 6. DATE RANGE PRESETS (used by every report) ------------------------
-// Returns { from: "YYYY-MM-DD", to: "YYYY-MM-DD" } for a named preset.
 function getDateRangeForPreset(preset) {
   const toStr = (d) => d.toISOString().slice(0, 10);
   const now = new Date();
@@ -95,14 +93,6 @@ function getDateRangeForPreset(preset) {
 }
 
 // ---- 7. DATE RANGE WIDGET ------------------------------------------------
-// Wires up a preset-buttons-plus-custom-dates block. Expects this structure
-// inside the element with id = widgetId:
-//   .filter-btn[data-range="..."]  (one of the presets above, or "custom")
-//   .custom-date-range             (wrapper, hidden by default)
-//     .custom-from / .custom-to    (date inputs)
-//     .custom-apply                (button)
-// Calls onChange({from, to}) whenever the selection changes, and once
-// immediately with "this_month" so every report has a sensible default.
 function initDateRangeFilter(widgetId, onChange) {
   const widget = document.getElementById(widgetId);
   const buttons = widget.querySelectorAll(".filter-btn");
@@ -132,3 +122,114 @@ function initDateRangeFilter(widgetId, onChange) {
   selectPreset("this_month");
 }
 
+// ---- 8. ACCOUNT BALANCE --------------------------------------------------
+// Opening balance + every collected invoice for that account − every paid
+// expense for that account. Used by both the Kasa/Banka report and the
+// Nakit Akışı projection (both home page and Raporlar), so it only needs
+// to be correct in one place.
+async function computeAccountBalance(acc) {
+  const { data: invoicesIn } = await sb
+    .from("invoices")
+    .select("grand_total")
+    .eq("account_id", acc.id)
+    .eq("collection_status", "tahsil_edildi");
+  const { data: expensesOut } = await sb
+    .from("expenses")
+    .select("total_amount")
+    .eq("account_id", acc.id)
+    .eq("payment_status", "odendi");
+
+  const inSum = (invoicesIn || []).reduce((s, x) => s + Number(x.grand_total), 0);
+  const outSum = (expensesOut || []).reduce((s, x) => s + Number(x.total_amount), 0);
+  return (Number(acc.opening_balance) || 0) + inSum - outSum;
+}
+
+// ---- 9. 12-WEEK CASH FLOW PROJECTION -------------------------------------
+// Returns everything both the home-page preview and the full Nakit Akışı
+// report need: current total balance, overdue/unplanned totals on both
+// sides, and a 12-week array of {label, shortLabel, net, projected}.
+async function computeCashFlowProjection(companyId) {
+  const { data: accounts } = await sb
+    .from("accounts")
+    .select("id, opening_balance")
+    .eq("company_id", companyId);
+
+  let totalBalance = 0;
+  for (const acc of (accounts || [])) {
+    totalBalance += await computeAccountBalance(acc);
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: uncollected } = await sb
+    .from("invoices")
+    .select("grand_total, due_date")
+    .eq("company_id", companyId)
+    .neq("collection_status", "tahsil_edildi");
+  const { data: unpaid } = await sb
+    .from("expenses")
+    .select("total_amount, due_date")
+    .eq("company_id", companyId)
+    .eq("payment_status", "odenecek");
+
+  let overdueIn = 0, overdueOut = 0, unplannedIn = 0, unplannedOut = 0;
+  const futureIn = {};
+  const futureOut = {};
+
+  (uncollected || []).forEach((x) => {
+    const amt = Number(x.grand_total) || 0;
+    if (!x.due_date) { unplannedIn += amt; return; }
+    if (x.due_date < today) { overdueIn += amt; return; }
+    const weekIdx = Math.floor((new Date(x.due_date) - new Date(today)) / (7 * 86400000));
+    if (weekIdx >= 0 && weekIdx < 12) futureIn[weekIdx] = (futureIn[weekIdx] || 0) + amt;
+  });
+
+  (unpaid || []).forEach((x) => {
+    const amt = Number(x.total_amount) || 0;
+    if (!x.due_date) { unplannedOut += amt; return; }
+    if (x.due_date < today) { overdueOut += amt; return; }
+    const weekIdx = Math.floor((new Date(x.due_date) - new Date(today)) / (7 * 86400000));
+    if (weekIdx >= 0 && weekIdx < 12) futureOut[weekIdx] = (futureOut[weekIdx] || 0) + amt;
+  });
+
+  const weeklyData = [];
+  let cumulative = totalBalance;
+  for (let i = 0; i < 12; i++) {
+    const net = (futureIn[i] || 0) - (futureOut[i] || 0);
+    cumulative += net;
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() + i * 7);
+    weeklyData.push({
+      label: `Hafta ${i + 1} (${startDate.toISOString().slice(5, 10)})`,
+      shortLabel: `H${i + 1}`,
+      net,
+      projected: cumulative,
+    });
+  }
+
+  return { totalBalance, overdueIn, overdueOut, unplannedIn, unplannedOut, weeklyData };
+}
+
+// ---- 10. CASH FLOW BAR CHART ---------------------------------------------
+// useShortLabel: true on the compact home-page preview ("H1", "H2"...),
+// false on the full Raporlar page ("Hafta 1 (07-28)"...).
+function renderCashflowChart(weeklyData, containerId, useShortLabel) {
+  const maxAbs = Math.max(1, ...weeklyData.map((w) => Math.abs(w.net)));
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+  weeklyData.forEach((w) => {
+    const pct = (Math.abs(w.net) / maxAbs) * 100;
+    const barClass = w.net >= 0 ? "cashflow-bar-positive" : "cashflow-bar-negative";
+    const label = useShortLabel ? w.shortLabel : w.label;
+    const row = document.createElement("div");
+    row.className = "cashflow-row";
+    row.innerHTML = `
+      <span class="cashflow-label">${label}</span>
+      <div class="cashflow-bar-track">
+        <div class="cashflow-bar ${barClass}" style="width:${pct}%;"></div>
+      </div>
+      <span class="cashflow-amount">${w.net >= 0 ? "+" : ""}${w.net.toFixed(2)}</span>
+    `;
+    container.appendChild(row);
+  });
+}

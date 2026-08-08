@@ -1,9 +1,10 @@
 // =========================================================
 // app.js — logic for the Home / login page (index.html)
 // Relies on shared.js being loaded first (sb, requireSession,
-// getMyCompany, categorizeInvoice, categorizeExpense).
+// getMyCompany, categorizeInvoice, categorizeExpense,
+// computeCashFlowProjection, renderCashflowChart).
 // =========================================================
-//this is a comment
+
 const loginWrapper = document.getElementById("login-wrapper");
 const appSection = document.getElementById("app-section");
 const loginForm = document.getElementById("login-form");
@@ -44,10 +45,11 @@ async function showApp(session) {
   }
 }
 
-// ---- DASHBOARD: Tahsilatlar + Ödemeler ------------------------------------------
+// ---- DASHBOARD: Tahsilatlar + Ödemeler + Nakit Akışı önizleme -------------------
 async function loadDashboard(companyId) {
   await loadReceivables(companyId);
   await loadPayables(companyId);
+  await loadCashFlowPreview(companyId);
 }
 
 async function loadReceivables(companyId) {
@@ -106,15 +108,20 @@ async function loadPayables(companyId) {
   document.getElementById("pay-stat-unplanned").textContent = unplanned.toFixed(2);
 }
 
-// ---- LOGIN (now includes the Turnstile token, if the widget rendered) ------------
+async function loadCashFlowPreview(companyId) {
+  const projection = await computeCashFlowProjection(companyId);
+  document.getElementById("cf-total-balance").textContent = projection.totalBalance.toFixed(2);
+  // true = short "H1, H2..." labels, since this is the compact home-page version
+  renderCashflowChart(projection.weeklyData, "home-cashflow-chart", true);
+}
+
+// ---- LOGIN (includes the Turnstile token, if the widget rendered) ----------------
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   loginError.textContent = "";
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  // Turnstile writes its result into a hidden input named
-  // "cf-turnstile-response" inside the widget's container div once solved.
   const turnstileInput = document.querySelector('#login-turnstile input[name="cf-turnstile-response"]');
   const turnstileToken = turnstileInput ? turnstileInput.value : null;
 
@@ -126,7 +133,6 @@ loginForm.addEventListener("submit", async (e) => {
 
   if (error) {
     loginError.textContent = error.message;
-    // Tokens are single-use — a fresh one is needed before the next attempt.
     if (window.turnstile) window.turnstile.reset();
     return;
   }

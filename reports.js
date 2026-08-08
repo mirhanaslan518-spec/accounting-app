@@ -2,8 +2,10 @@
 // reports.js — logic for reports.html
 // Relies on shared.js (sb, requireSession, getMyCompany,
 // categorizeInvoice, categorizeExpense, getDateRangeForPreset,
-// initDateRangeFilter) and csv-tools.js (exportToExcel via
-// window.XLSX, used here through exportTableToExcel).
+// initDateRangeFilter, computeAccountBalance,
+// computeCashFlowProjection, renderCashflowChart) and
+// csv-tools.js (exportToExcel via window.XLSX, used here
+// through exportTableToExcel).
 // =========================================================
 
 let currentCompanyId = null;
@@ -21,10 +23,6 @@ function escapeHtml(str) {
 }
 
 // ---- GENERIC TABLE EXPORT ----------------------------------------------------
-// Reads whatever is currently rendered in a <table id="..."> — headers from
-// <thead>, data from <tbody> — and exports it. Works for every report tab
-// without needing a separate column-definition list per report, since the
-// table already IS the data we want to export.
 function exportTableToExcel(tableId, filename) {
   const table = document.getElementById(tableId);
   if (!table) return;
@@ -615,23 +613,6 @@ async function loadKbAccounts() {
   });
 }
 
-async function computeAccountBalance(acc) {
-  const { data: invoicesIn } = await sb
-    .from("invoices")
-    .select("grand_total")
-    .eq("account_id", acc.id)
-    .eq("collection_status", "tahsil_edildi");
-  const { data: expensesOut } = await sb
-    .from("expenses")
-    .select("total_amount")
-    .eq("account_id", acc.id)
-    .eq("payment_status", "odendi");
-
-  const inSum = (invoicesIn || []).reduce((s, x) => s + Number(x.grand_total), 0);
-  const outSum = (expensesOut || []).reduce((s, x) => s + Number(x.total_amount), 0);
-  return (Number(acc.opening_balance) || 0) + inSum - outSum;
-}
-
 async function computePeriodInOut(accountId, range) {
   let invQ = sb.from("invoices").select("grand_total").eq("company_id", currentCompanyId).eq("collection_status", "tahsil_edildi");
   if (accountId) invQ = invQ.eq("account_id", accountId);
@@ -734,99 +715,27 @@ async function loadKasaBankaReport() {
 }
 
 // ================= NAKİT AKIŞI =================
+// Now just calls the shared computeCashFlowProjection/renderCashflowChart
+// from shared.js — same math the Ana Sayfa preview uses, so the two can
+// never quietly drift apart.
 async function initNakitAkisiTab() {
   await loadNakitAkisiReport();
 }
 
-function renderCashflowChart(weeklyData) {
-  const maxAbs = Math.max(1, ...weeklyData.map((w) => Math.abs(w.net)));
-  const container = document.getElementById("cashflow-chart");
-  container.innerHTML = "";
-  weeklyData.forEach((w) => {
-    const pct = (Math.abs(w.net) / maxAbs) * 100;
-    const barClass = w.net >= 0 ? "cashflow-bar-positive" : "cashflow-bar-negative";
-    const row = document.createElement("div");
-    row.className = "cashflow-row";
-    row.innerHTML = `
-      <span class="cashflow-label">${w.label}</span>
-      <div class="cashflow-bar-track">
-        <div class="cashflow-bar ${barClass}" style="width:${pct}%;"></div>
-      </div>
-      <span class="cashflow-amount">${w.net >= 0 ? "+" : ""}${w.net.toFixed(2)}</span>
-    `;
-    container.appendChild(row);
-  });
-}
-
 async function loadNakitAkisiReport() {
-  const { data: accounts } = await sb
-    .from("accounts")
-    .select("id, opening_balance")
-    .eq("company_id", currentCompanyId);
+  const projection = await computeCashFlowProjection(currentCompanyId);
 
-  let totalBalance = 0;
-  for (const acc of (accounts || [])) {
-    totalBalance += await computeAccountBalance(acc);
-  }
-  document.getElementById("na-total-balance").textContent = totalBalance.toFixed(2);
+  document.getElementById("na-total-balance").textContent = projection.totalBalance.toFixed(2);
+  document.getElementById("na-overdue-in").textContent = projection.overdueIn.toFixed(2);
+  document.getElementById("na-overdue-out").textContent = projection.overdueOut.toFixed(2);
+  document.getElementById("na-unplanned-in").textContent = projection.unplannedIn.toFixed(2);
+  document.getElementById("na-unplanned-out").textContent = projection.unplannedOut.toFixed(2);
 
-  const today = new Date().toISOString().slice(0, 10);
-
-  const { data: uncollected } = await sb
-    .from("invoices")
-    .select("grand_total, due_date")
-    .eq("company_id", currentCompanyId)
-    .neq("collection_status", "tahsil_edildi");
-  const { data: unpaid } = await sb
-    .from("expenses")
-    .select("total_amount, due_date")
-    .eq("company_id", currentCompanyId)
-    .eq("payment_status", "odenecek");
-
-  let overdueIn = 0, overdueOut = 0, unplannedIn = 0, unplannedOut = 0;
-  const futureIn = {};
-  const futureOut = {};
-
-  (uncollected || []).forEach((x) => {
-    const amt = Number(x.grand_total) || 0;
-    if (!x.due_date) { unplannedIn += amt; return; }
-    if (x.due_date < today) { overdueIn += amt; return; }
-    const weekIdx = Math.floor((new Date(x.due_date) - new Date(today)) / (7 * 86400000));
-    if (weekIdx >= 0 && weekIdx < 12) futureIn[weekIdx] = (futureIn[weekIdx] || 0) + amt;
-  });
-
-  (unpaid || []).forEach((x) => {
-    const amt = Number(x.total_amount) || 0;
-    if (!x.due_date) { unplannedOut += amt; return; }
-    if (x.due_date < today) { overdueOut += amt; return; }
-    const weekIdx = Math.floor((new Date(x.due_date) - new Date(today)) / (7 * 86400000));
-    if (weekIdx >= 0 && weekIdx < 12) futureOut[weekIdx] = (futureOut[weekIdx] || 0) + amt;
-  });
-
-  document.getElementById("na-overdue-in").textContent = overdueIn.toFixed(2);
-  document.getElementById("na-overdue-out").textContent = overdueOut.toFixed(2);
-  document.getElementById("na-unplanned-in").textContent = unplannedIn.toFixed(2);
-  document.getElementById("na-unplanned-out").textContent = unplannedOut.toFixed(2);
-
-  const weeklyData = [];
-  let cumulative = totalBalance;
-  for (let i = 0; i < 12; i++) {
-    const net = (futureIn[i] || 0) - (futureOut[i] || 0);
-    cumulative += net;
-    const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() + i * 7);
-    weeklyData.push({
-      label: `Hafta ${i + 1} (${startDate.toISOString().slice(5, 10)})`,
-      net,
-      projected: cumulative,
-    });
-  }
-
-  renderCashflowChart(weeklyData);
+  renderCashflowChart(projection.weeklyData, "cashflow-chart", false);
 
   const tbody = document.getElementById("na-weekly-body");
   tbody.innerHTML = "";
-  weeklyData.forEach((w) => {
+  projection.weeklyData.forEach((w) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${w.label}</td>
@@ -844,4 +753,3 @@ document.getElementById("logout-btn").addEventListener("click", async () => {
 });
 
 init();
-
