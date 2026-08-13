@@ -464,3 +464,6 @@ button.secondary { background: transparent; border: 1px solid var(--border); col
 .report-header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin: 20px 0 8px; }
 .report-header-row .report-subtitle { margin: 0; }
 .export-btn { width: auto; margin: 0; padding: 7px 14px; font-size: 12px; }
+
+.section-header-row { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin: 24px 0 8px; }
+.section-header-row .section-title { margin: 0; }
